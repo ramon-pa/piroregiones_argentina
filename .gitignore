@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local settings and credentials
+.env
+.config/earthengine/
+credentials
+
+# Data lives outside git; *-cache folders are regenerable
+data/
+outputs/*.tif
+outputs/*.parquet
+
+# macOS
+.DS_Store

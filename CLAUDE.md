@@ -1,0 +1,203 @@
+# CLAUDE.md · Pirorregiones de Argentina
+
+Índice y reglas del proyecto. Es el documento para reorientarse al empezar cada sesión.
+Qué hacer después: [`ROADMAP.md`](ROADMAP.md). Por qué se decidió algo: [`docs/decisions.md`](docs/decisions.md).
+Qué dice cada paper: [`docs/references.md`](docs/references.md).
+
+Regla de este archivo: cada afirmación lleva su fuente. Lo no verificado se marca **[no verificado]**.
+
+---
+
+## 1. Overview
+
+Objetivo: el **mapa de pirorregiones de Argentina**, regiones continuas con límites, análogas a las
+ecorregiones, definidas por cómo se quema el territorio (cuánto, cada cuánto, cuándo, de qué tamaño
+y qué cobertura). Pregunta: ¿el fuego se organiza según las ecorregiones o tiene su propia geografía?
+
+Destino: **trabajo final del curso Geo Data Scientist de Geo Dojo** y presentación en el **taller de
+MapBiomas**. **No es un paper**: según Iván (2026-10-17), en la red MapBiomas ya hay gente trabajando
+en pirorregiones y publicar por cuenta propia sería demasiado agresivo.
+
+Insumos: MapBiomas Argentina Fuego colección 1 (`_v2`) y cobertura MapBiomas Argentina colección 3,
+a 30 m (sección 4).
+
+Motivación: el antecedente más cercano en Argentina (Naval-Fernández et al. 2025) cubre solo el
+Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/references.md`.
+
+## 2. Current state (2026-10-17)
+
+- Esqueleto del repo creado, siguiendo la organización del repo de fuego de Iván. Repo git local
+  con remoto `git@github.com:ramon-pa/Piroregiones_argentina.git` (privado).
+- Paso 00 listo: `scripts/check_assets.py` verifica todos los insumos de GEE (7/7 el 2026-10-17).
+- Decisiones: `docs/decisions.md` (D4 acordada; D1, D2, D3, D5 abiertas).
+- Próximo: `ROADMAP.md`.
+
+Página de seguimiento: https://claude.ai/artifact/Eqz68NSP4Y8vRDLTqRL5m5 (compartida por link).
+Es una vista de este repo; si difieren, manda el repo.
+
+## 3. File inventory
+
+| Archivo | Qué es |
+|---|---|
+| `CLAUDE.md` | este índice |
+| `README.md` | mapa del repo e instalación |
+| `ROADMAP.md` | qué hacer después, en orden |
+| `BACKLOG.md` | ideas sin agendar |
+| `pyproject.toml`, `uv.lock`, `.python-version` | entorno (uv, Python 3.12); dependencias solo cuando un paso las necesita |
+| `.env.example` | variable `GEE_PROJECT` opcional |
+| `utils/constants.py` | **única fuente de verdad**: assets, años, grilla, prefijo de tareas |
+| `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
+| `docs/00-overview.md` | el método en una página y la lista de pasos |
+| `docs/TEMPLATE.md` | forma de los docs de paso (adaptada del repo de fuego) |
+| `docs/decisions.md` | decisiones de diseño, con estado y fundamento |
+| `docs/references.md` | notas por paper, con qué se leyó de cada uno; herramientas verificadas |
+| `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
+
+## 4. GEE asset paths
+
+Los ids que usa el código viven en `utils/constants.py`; esta sección los repite para lectura y
+registra lo verificado. `scripts/check_assets.py` comprueba existencia, bandas y grilla de todos los
+insumos (7/7 el 2026-10-17, proyecto `mapbiomas-argentina`, cuenta ramonpagis). La tabla de
+subproductos de abajo viene de un chequeo exploratorio del 2026-10-14; no la usa el pipeline.
+
+| Qué | Asset | Bandas | Grilla |
+|---|---|---|---|
+| Mes de quema, 27 imágenes (1999 a 2025) | `projects/mapbiomas-argentina/assets/FIRE/COLLECTION-1/CLASSIFICATION_COLLECTIONS/collection1_fire_mask_v2` (imágenes `mapbiomas_argentina_fire_collection1_fire_mask_v2_<año>`) | 1 por imagen | **nativa** (EPSG:4326, `SNIC_TRANSFORM`) |
+| Cobertura colección 3 | `projects/mapbiomas-argentina/assets/LAND-COVER/COLLECTION-3/INTEGRATION/mapbiomas_argentina_collection3_pb` | `classification_1985` a `classification_2025` (41) | **nativa**, desfase entero (abajo) |
+
+Subproductos `_v2`, en `projects/mapbiomas-argentina/assets/FIRE/COLLECTION-1/FINAL_PRODUCTS/mapbiomas_argentina_fire_collection1_<subproducto>_v2`:
+
+| Subproducto | Bandas | Codificación (según `07-published_products.md`) | Grilla guardada |
+|---|---|---|---|
+| `annual_burned` | `burned_area_1999` a `_2025` (27) | 1 si quemado | **EPSG:3857, 30 m** |
+| `monthly_burned` | `burned_monthly_1999` a `_2025` (27) | mes de quema | **EPSG:3857, 30 m** |
+| `accumulated_burned`, `accumulated_burned_coverage` | `fire_accumulated_1999_1999` a `_2025_2025` (53 cada uno) | quemado al menos una vez en la ventana | **EPSG:3857, 30 m** |
+| `annual_burned_coverage` | `burned_coverage_1999` a `_2025` (27) | clase del píxel quemado | **EPSG:3857, 30 m** |
+| `monthly_burned_coverage` | `burned_coverage_1999` a `_2025` (27) | `mes*100 + clase` | **EPSG:3857, 30 m** |
+| `frequency_burned` | `fire_frequency_1999_1999` a `fire_frequency_2025_2025` (53) | años quemados en la ventana | **EPSG:3857, 30 m** |
+| `frequency_burned_coverage` | 53, mismos nombres | `frecuencia*100 + clase` (ver nota) | **EPSG:3857, 30 m** |
+| `annual_burned_area_ha` | `scar_area_ha_1999` a `_2025` (27) | área de la cicatriz (ha) | nativa (transform idéntico a `SNIC_TRANSFORM`) |
+| `annual_burned_id` | `scar_id_1999` a `_2025` (27) | id de cicatriz | EPSG:4326 (transform no comparado) |
+| `annual_burned_scar_size_range` | `scar_area_ha_1999` a `_2025` (27; el nombre de banda es así a propósito, ver doc 07) | clase de tamaño 1 a 8 | EPSG:4326 (transform no comparado) |
+| `year_last_fire` | `year_last_fire_2000` a `year_last_fire_2026` (27) | año del último fuego | nativa, desfase entero |
+
+**Importante:** los subproductos marcados EPSG:3857 (todos los del paso 07d salvo `year_last_fire`)
+**no están en la grilla nativa**. Las versiones `_v1` sí lo estaban (comprobado para
+`annual_burned_coverage_v1`). El equipo de fuego **ya lo sabe**: lo midió el 17-sep-2026 y lo
+documentó en `statistics/docs/statistics.md` (secciones "The grid" y el punto "EPSG:3857 is a display
+grid, not a measurement grid"). Solo `docs/07-published_products.md` sigue diciendo que se exportan
+con `SNIC_TRANSFORM`. Consecuencia para nosotros: cruzar fuego y cobertura desde la colección
+mensual y la LULC, que están en la grilla nativa.
+
+**Año de cobertura: el previo al fuego (Y−1).** Es la regla de todo el mapeo y el análisis del
+equipo de fuego (Iván, 15-oct-2026). Fuentes en su repo:
+- ATBD (`collection-01/ATBD/main.tex`, sección "MapBiomas Argentina land cover"): la cobertura se
+  lee siempre en `y−1`, porque la cobertura de un píxel quemado cambia **porque** se quemó.
+- `statistics/docs/statistics.md`, "The land-cover year: we cross the PREVIOUS one": sus
+  estadísticas cruzan `burned_area_<Y>` con `classification_<Y−1>`.
+- Excepción: los assets publicados `*_coverage` usan el **mismo** año, por convención de la red
+  (`07-published_products.md`, "Same year or previous year?"). Por eso tampoco sirven para nosotros.
+
+Ecorregiones (Burkart et al. 1999, según `statistics.md`, sección "The territorial layer"),
+**verificadas en GEE el 2026-10-17**:
+
+| Asset | Features | Campo de nombre |
+|---|---|---|
+| `projects/mapbiomas-argentina/assets/ANCILLARY_DATA/VECTOR/ARG/ARG-Political_Level_2-13Ecorregiones_3857` | 13 | `LEVEL_2` (id `GEOCODE`, numérico) |
+| `projects/mapbiomas-argentina/assets/ANCILLARY_DATA/VECTOR/ARG/ARG-Political_Level_2-16Ecorregiones_3857` | 16 | `LEVEL_2` (`GEOCODE` es texto: convertir antes de `paint`) |
+
+El equipo de fuego midió que la de 16 clases se agrega exacto en la de 13. Advertencia de su doc:
+pintar los vectores, nunca leer los rásters `_r`, que tienen otra numeración.
+
+Nota sobre `frequency_burned_coverage`: la clase es la del **extremo móvil** de la ventana. En las
+ventanas hacia atrás (`<y>_2025`) es la clase del año `y`, el **inicio**. Solo en la ventana completa
+`1999_2025` es la de 2025. Fuente: `07-published_products.md`, "Frequency windows are two-sided".
+
+Nota sobre `year_last_fire`: el doc del repo dice que las bandas se llaman `classification_<año+1>`;
+en GEE se llaman `year_last_fire_<año+1>`.
+
+Grilla nativa: `crs = EPSG:4326`, `crsTransform = [0.000269494585236, 0, -73.58468801489491, 0,
+-0.000269494585236, -21.764113209062533]` (`SNIC_TRANSFORM` en `constants.py`). Desfases medidos
+el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferencia ~1e-16):
+
+| Asset | Columnas al este | Filas al sur |
+|---|---|---|
+| LULC col-3 `_pb` | 67 | 62 |
+| `year_last_fire_v2` | 63 | −110 (al norte) |
+
+## 5. Key verified numbers
+
+| Dato | Valor | Fuente | Estado |
+|---|---|---|---|
+| Años de fuego col-1 | 1999 a 2025 (27 imágenes mensuales) | `scripts/check_assets.py`, 2026-10-17 | verificado |
+| Bandas de cobertura col-3 `_pb` | 1985 a 2025 (41) | `scripts/check_assets.py`, 2026-10-17 | verificado |
+| Desfase de la cobertura respecto de la grilla de fuego | +67 columnas, +62 filas | `scripts/check_assets.py`, 2026-10-17 | verificado |
+| Cicatriz más grande | 219.410 ha (2003) | comentario en `constants.py` del repo de fuego | medido por el equipo de fuego, no por nosotros |
+| Cicatrices ≥ 100.000 ha | 24 | idem | idem |
+| Cicatrices < 10 ha | 76,14 % del número, 5,67 % del área | idem | idem |
+| Área del píxel nativo a −22° y −55° | ~829 y ~513 m² | script exploratorio (scratchpad, 2026-10-14) | **exploratorio**: el script no está en el repo |
+| Área de celda H3 res 5 en Argentina | 209 a 245 km² (3 puntos de prueba) | idem | **exploratorio** |
+
+Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
+
+## 6. Known issues and fixes
+
+- **Subproductos `_v2` fuera de la grilla nativa.** Ver sección 4.
+- **Omisión probablemente alta en fuego col-1.** La validación en curso del equipo de fuego
+  (`collection-01/validation/docs/design.md`, estado al 2026-10-06, ola 1 interpretada al 85 %)
+  da exactitud del usuario de 73 a 79 % y exactitud del productor de 10 a 22 % en los tres años
+  muestreados, con intervalos muy amplios. Es preliminar e interna: **no citar**. Si se confirma, el
+  producto subestima el área quemada, y la tasa de quema de nuestras regiones también, quizás de
+  forma distinta según la región. Esto contradice lo que decía el piloto patagónico (más comisión
+  que omisión, según `geospatial-skills/MapBiomas-Fire/fire-knowledge.md`).
+- **El producto excluye fuego agrícola en todo el país.** Regla B: se descarta todo objeto con más
+  de 40 % de agricultura (`T_AGRI = 0.40`), sin condición de región ni estación. Regla A: se descartan
+  objetos de pastizal pampeano (más de 70 %), de menos de 150 ha, quemados entre el 1 jul y el 15 nov,
+  dentro del AOI agrícola de la Pampa. Fuente: `docs/07-vector_to_raster.md`, "Object exclusion
+  ruleset". Consecuencia: la tasa de quema agrícola está subestimada por construcción.
+- **El producto no tiene intensidad (FRP) ni causa de ignición.** Los antecedentes las usan.
+- Gotchas de GEE generales: no se copian acá, están en `~/Desktop/GIS/geospatial-skills/SKILLS/gee-gotchas.md`.
+  Los que más van a pesar: fijar `crsTransform` en todo export; sumar áreas con `pixelArea()` y
+  nunca contar píxeles; el límite de ~17k features al exportar una FC a asset.
+
+## 7. Step-by-step workflows
+
+Instalación y chequeo de insumos: `README.md`, "Instalación". Cada paso que se implemente tendrá su
+`docs/NN-*.md` con su bloque "Correr".
+
+Patrones del repo de fuego para reusar (leer, no copiar sin entender), en `collection-01/statistics/`:
+- `burnable_export.py`: denominador "quemable" por ecorregión, todo el cruce empaquetado en un entero
+  y una sola reducción agrupada. Explica por qué usa tarea batch y no descarga interactiva (el chequeo
+  de tamaño se hace sobre la resolución nativa).
+- `lulc_change_export.py`: cobertura antes (Y−1) y después del fuego, para todo el país (diseño de
+  Ferro et al. 2026).
+- `burn_perc_export.py`: trampas medidas al agregar frecuencia (producto con `selfMask`, usar `mean`
+  y no `max`, ponderar por área en 3857).
+
+## 8. Contacts
+
+- **Iván Barberá**: consejero del proyecto; repo de MapBiomas Fuego (solo lectura para nosotros);
+  coautor de Ferro et al. 2026. El 15-oct-2026 apoyó el proyecto, lo propuso como trabajo final y
+  para mostrarlo en el taller de MapBiomas, recomendó hexágonos y marcó la regla de cobertura del año
+  previo. El 2026-10-17 aclaró que no conviene publicar un paper (hay gente de la red en el tema).
+  Preguntarle quiénes son, para presentar en el taller sabiendo con quién dialoga el trabajo.
+- Posibles revisores de los límites, autores de antecedentes directos: Juan Pablo Argañaraz
+  (Naval-Fernández et al. 2025), Thomas Kitzberger (Ferro et al. 2026). No contactados.
+
+---
+
+## Reglas de trabajo en este repo
+
+- Hablar antes de tocar archivos: plan, luz verde, recién ahí actuar. Commit y push solo cuando se pide.
+- El repo de Iván es de solo lectura. Su organización es el modelo de este repo.
+- Un hecho, un solo lugar: valores que usa el código en `utils/constants.py`; verificaciones y
+  números en este archivo; decisiones en `docs/decisions.md`; papers en `docs/references.md`; orden
+  de trabajo en `ROADMAP.md`; historia en `docs/notes/`.
+- Un paso numerado = un script en `workflow/` = un doc `docs/NN-*.md` con la forma de `docs/TEMPLATE.md`.
+- GEE: ningún `ee.*` a nivel de módulo; fijar `crs` + `crsTransform` (de `constants.py`) en todo
+  export; sumar áreas con `pixelArea()`; un export por año; lanzadores que se pueden volver a correr
+  sin duplicar tareas; descripciones de tarea con prefijo `TASK_PREFIX`.
+- Dependencias con `uv add`, cuando un paso las necesita.
+- Commits con el estilo del repo de fuego: `feat(02): ...`, `docs(roadmap): ...`, explicando el porqué.
+- Citar secciones por nombre, nunca por número.
+- Sin rayas largas en ningún texto.
