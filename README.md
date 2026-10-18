@@ -17,8 +17,8 @@ Requiere [uv](https://docs.astral.sh/uv/) y una cuenta de Google Earth Engine co
 `projects/mapbiomas-argentina`.
 
 ```bash
-git clone git@github.com:ramon-pa/Piroregiones_argentina.git
-cd Piroregiones_argentina
+git clone git@github.com:ramon-pa/piroregiones_argentina.git
+cd piroregiones_argentina
 uv sync                                   # crea .venv con Python 3.12
 earthengine authenticate                  # una sola vez por máquina
 uv run python scripts/check_assets.py     # debe terminar en "7/7 checks passed"

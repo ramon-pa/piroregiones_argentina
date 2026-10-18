@@ -27,7 +27,7 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
 ## 2. Current state (2026-10-17)
 
 - Esqueleto del repo creado, siguiendo la organización del repo de fuego de Iván. Repo git local
-  con remoto `git@github.com:ramon-pa/Piroregiones_argentina.git` (privado).
+  con remoto `git@github.com:ramon-pa/piroregiones_argentina.git` (privado).
 - Paso 00 listo: `scripts/check_assets.py` verifica todos los insumos de GEE (7/7 el 2026-10-17).
 - Decisiones: `docs/decisions.md` (D4 acordada; D1, D2, D3, D5 abiertas).
 - Próximo: `ROADMAP.md`.
@@ -136,7 +136,7 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Cicatrices ≥ 100.000 ha | 24 | idem | idem |
 | Cicatrices < 10 ha | 76,14 % del número, 5,67 % del área | idem | idem |
 | Área del píxel nativo a −22° y −55° | ~829 y ~513 m² | script exploratorio (scratchpad, 2026-10-14) | **exploratorio**: el script no está en el repo |
-| Área de celda H3 res 5 en Argentina | 209 a 245 km² (3 puntos de prueba) | idem | **exploratorio** |
+| Celdas H3 que tocan la Argentina continental (13 ecorregiones menos Islas del Atlántico Sur, polígono simplificado a 500 m, ~2,795 M km²) | res 4: 2.310 (1.102 a 1.761 km²) · res 5: 14.312 (157 a 251 km²) · res 6: 96.643 (22 a 36 km²) · res 7: 668.539 (3,2 a 5,1 km²) | script exploratorio `h3_count.py` (scratchpad, 2026-10-17) | **exploratorio**: reemplaza la estimación anterior de 3 puntos (209 a 245 km² en res 5), que subestimaba la variación |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
 
