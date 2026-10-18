@@ -5,25 +5,29 @@ Una decisión acordada se cambia solo agregando una entrada nueva que la reempla
 
 ---
 
-## D1 · Unidad de análisis · abierta
+## D1 · Unidad de análisis · acordada (2026-10-17)
 
-**Propuesta.** Calcular a 30 m en la grilla nativa de MapBiomas y regionalizar sobre celdas gruesas.
+**Hexágonos H3.** Se extrae una vez en **res 6** y se arma localmente **res 5** sumando áreas
+(`h3.cell_to_parent`). El mapa final usa una sola resolución, elegida entre res 5 y res 6 por
+criterio ecológico después de los pasos 06 y 07. Res 4 y res 7 quedan descartadas.
 
-- Para calcular, la grilla nativa: fuego col-1 y cobertura col-3 comparten la misma red de píxeles
-  (`CLAUDE.md`, "GEE asset paths"), así que cruzarlos no requiere remuestrear.
-- Para regionalizar, celdas de entre 10 y 25 km. En los antecedentes con grilla que leímos, las
-  celdas van de 5 km (Naval-Fernández et al. 2025 probó 5, 10 y 25 km) a 60 km (Boulanger et al. 2014).
-- Cuadrados alineados a la grilla o hexágonos H3: sin decidir. Iván recomienda hexágonos
-  (15-oct-2026): es lo que se usa para regionalizaciones de este tipo. Los cuadrados evitan subir
-  geometrías a GEE. Los hexágonos dan vecinos sin ambigüedad (Birch et al. 2007, resumen) y bordes
-  más suaves. Ninguno elimina el efecto borde del país ni de la costa.
-- Toda área se suma con `pixelArea()`: el píxel nativo no es de área constante (`CLAUDE.md`,
-  "Key verified numbers", exploratorio).
-- Los cruces de fuego y cobertura se calculan desde la colección mensual `fire_mask_v2` y la LULC
-  col-3, que están en la grilla nativa. Los subproductos `_v2` derivados (`annual_burned_coverage`,
-  `frequency_burned`, etc.) están guardados en EPSG:3857 y no se usan (`CLAUDE.md`, "GEE asset paths").
-
-Pendiente: prueba en GEE de si la agregación entra sin tareas de exportación.
+- **Cálculo a 30 m en la grilla nativa.** Fuego col-1 y cobertura col-3 comparten la misma red de
+  píxeles (`CLAUDE.md`, "GEE asset paths"): cruzarlos no remuestrea. Toda área se suma con
+  `pixelArea()`. El cruce sale de la colección mensual `fire_mask_v2` y la LULC col-3; los
+  subproductos `_v2` derivados están en EPSG:3857 y no se usan.
+- **Por qué hexágonos.** Iván los recomienda (15-oct-2026) como lo que se usa para regionalizaciones
+  de este tipo; dan vecinos sin ambigüedad (Birch et al. 2007, resumen). Ninguna grilla elimina el
+  efecto borde del país ni de la costa.
+- **Por qué la deformación de H3 no pesa.** En Argentina el 90 % de las celdas varía como mucho
+  1,38 veces en área (extremos 1,59), del mismo orden que el píxel nativo, y no cae ningún pentágono.
+  Todas las variables son tasas sobre el área disponible, así que no dependen del tamaño de la celda.
+  El tamaño mínimo de región se mide en área, no en cantidad de celdas. Plan B si se objeta:
+  hexágonos planos de igual área en Albers para Sudamérica (cada tamaño se extrae aparte).
+- **Por qué res 5 y res 6.** En los antecedentes con grilla, las celdas van de 5 a 60 km. Res 4
+  (~1.450 km² de media) deja ~3 celdas por región mínima (criterio de Erni, ~4.388 km²); res 7
+  (~669 mil celdas) no entra en el código empaquetado de 32 bits y obliga a subir ~669 mil polígonos.
+- **Por qué no es una decisión de cómputo.** Medido: el tamaño de celda no cambia el costo de la
+  reducción; lo que cuesta es recorrer los píxeles (`docs/notes/01-grid_and_compute.md`).
 
 ## D2 · Período · abierta
 
@@ -91,3 +95,20 @@ Herramienta: sin decidir. Candidata principal: `pygeoda.redcap` en su variante d
 con enlace de Ward, que es el método de Boulanger et al. 2014, con `min_bound` sobre el área para el
 tamaño mínimo. Alternativas en `spopt`. Ver `docs/references.md`, "Herramientas". Se verificaron las
 firmas y la documentación; no se corrió ningún análisis.
+
+## D6 · Un solo barrido por año · propuesta (2026-10-17)
+
+Cobertura disponible y quemado salen de **una sola reducción por año**, con un código empaquetado
+`celda × 13.000 + clase(Y−1) × 130 + mes (0 = no quemado) × 10 + clase de tamaño`. Sumando todas las
+filas de una celda y clase sale el área disponible; sumando las de mes > 0, el área quemada.
+
+Por qué: la cobertura del año previo se lee una vez por año en vez de dos, y numerador y denominador
+salen de la misma lectura a 30 m. El código entra en un entero de 32 bits hasta res 6 (~1.256
+millones con 96.643 celdas, sobre un máximo de 2.147 millones). Una tarea por año, para acotar la
+memoria del reductor agrupado.
+
+Descartado: leer la cobertura a menor resolución. Ahorra ~2 a 3 veces el tiempo, pero las pirámides
+por moda subestiman hasta 26 % la clase Pasturas a 240 m (`docs/notes/01-grid_and_compute.md`).
+
+Pendiente: probarlo en el recuadro de Córdoba (tiempo, filas, y que cierre contra los dos resúmenes
+por separado). La frecuencia (paso 04) queda aparte: necesita los 27 años de cada píxel juntos.

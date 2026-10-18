@@ -6,4 +6,6 @@ requires-python = ">=3.12"
 # Dependencies are added with `uv add` when a step needs them, not before.
 dependencies = [
     "earthengine-api",
+    "h3>=4.5.0",
+    "pyproj>=3.8.0",
 ]

@@ -29,7 +29,9 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
 - Esqueleto del repo creado, siguiendo la organización del repo de fuego de Iván. Repo git local
   con remoto `git@github.com:ramon-pa/piroregiones_argentina.git` (privado).
 - Paso 00 listo: `scripts/check_assets.py` verifica todos los insumos de GEE (7/7 el 2026-10-17).
-- Decisiones: `docs/decisions.md` (D4 acordada; D1, D2, D3, D5 abiertas).
+- Grilla y cómputo medidos sin exportar nada (`docs/notes/01-grid_and_compute.md`): D1 cerrada (H3,
+  res 5 o res 6), D6 propuesta (un solo barrido por año).
+- Decisiones: `docs/decisions.md` (D1 y D4 acordadas; D2, D3, D5 abiertas; D6 propuesta).
 - Próximo: `ROADMAP.md`.
 
 Página de seguimiento: https://claude.ai/artifact/Eqz68NSP4Y8vRDLTqRL5m5 (compartida por link).
@@ -47,11 +49,14 @@ Es una vista de este repo; si difieren, manda el repo.
 | `.env.example` | variable `GEE_PROJECT` opcional |
 | `utils/constants.py` | **única fuente de verdad**: assets, años, grilla, prefijo de tareas |
 | `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
+| `scripts/h3_cells_argentina.py` | cuántas celdas H3 cubren el país y cuánto varía su área |
+| `scripts/bench_interactive.py` | pruebas interactivas de costo y precisión de los resúmenes por celda |
 | `docs/00-overview.md` | el método en una página y la lista de pasos |
 | `docs/TEMPLATE.md` | forma de los docs de paso (adaptada del repo de fuego) |
 | `docs/decisions.md` | decisiones de diseño, con estado y fundamento |
 | `docs/references.md` | notas por paper, con qué se leyó de cada uno; herramientas verificadas |
 | `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
+| `docs/notes/01-grid_and_compute.md` | lo medido para elegir la grilla y la estrategia de cómputo |
 
 ## 4. GEE asset paths
 
@@ -135,8 +140,9 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Cicatriz más grande | 219.410 ha (2003) | comentario en `constants.py` del repo de fuego | medido por el equipo de fuego, no por nosotros |
 | Cicatrices ≥ 100.000 ha | 24 | idem | idem |
 | Cicatrices < 10 ha | 76,14 % del número, 5,67 % del área | idem | idem |
-| Área del píxel nativo a −22° y −55° | ~829 y ~513 m² | script exploratorio (scratchpad, 2026-10-14) | **exploratorio**: el script no está en el repo |
-| Celdas H3 que tocan la Argentina continental (13 ecorregiones menos Islas del Atlántico Sur, polígono simplificado a 500 m, ~2,795 M km²) | res 4: 2.310 (1.102 a 1.761 km²) · res 5: 14.312 (157 a 251 km²) · res 6: 96.643 (22 a 36 km²) · res 7: 668.539 (3,2 a 5,1 km²) | script exploratorio `h3_count.py` (scratchpad, 2026-10-17) | **exploratorio**: reemplaza la estimación anterior de 3 puntos (209 a 245 km² en res 5), que subestimaba la variación |
+| Área del píxel nativo a −22° y −55° | ~829 y ~513 m² | cuenta exploratoria (scratchpad, 2026-10-14) | **exploratorio**: no hay script en el repo |
+| Costo de una reducción agrupada interactiva, 1 año, recuadro de 1° en Córdoba | ~3 a 6 s a 30 m, sin diferencia consistente entre celdas tipo res 5 y res 6 | `scripts/bench_interactive.py`, 2026-10-17 | verificado (tiempos varían entre corridas) |
+| Celdas H3 que tocan la Argentina continental (13 ecorregiones menos Islas del Atlántico Sur, simplificado a 500 m, 2.795.123 km²) | res 4: 2.310 · res 5: 14.312 · res 6: 96.643 · res 7: 668.539. Res 5 y 6: p5 a p95 de área 1,38 veces, extremos 1,59, sin pentágonos | `scripts/h3_cells_argentina.py`, 2026-10-17 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
 
