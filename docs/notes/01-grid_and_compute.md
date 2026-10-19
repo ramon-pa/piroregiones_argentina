@@ -18,10 +18,16 @@ Sur, simplificado a 500 m en GEE; 176 polígonos, 2.795.123 km² geodésicos.
 
 | H3 | Celdas que tocan el país | Área por celda |
 |---|---|---|
-| res 4 | 2.310 | 1.102 a 1.761 km² |
-| res 5 | 14.312 | 157 a 251 km² |
-| res 6 | 96.643 | 22 a 36 km² |
-| res 7 | 668.539 | 3,2 a 5,1 km² |
+| res 4 | 2.125 | 1.102 a 1.761 km² |
+| res 5 | 14.124 | 157 a 251 km² |
+| res 6 | 96.461 | 22 a 36 km² |
+| res 7 | 668.344 | 3,2 a 5,1 km² |
+
+> **Corrección del 2026-10-19.** La primera versión de esta tabla decía 2.310, 14.312, 96.643 y
+> 668.539: contaba celdas repetidas. Con `contain="overlap"`, `h3` devuelve una celda una vez por
+> cada polígono del país que toca (son 176), y en res 6 eso agregaba 182 copias. Lo detectó el
+> control de duplicados de `workflow/01-hex_grid.py`; el script ahora deduplica y se volvió a
+> correr. Las áreas y la tabla de abajo (modo `center`, sin duplicados) no cambian.
 
 Celdas con centro dentro del país:
 

@@ -25,9 +25,13 @@ criterio ecológico después de los pasos 06 y 07. Res 4 y res 7 quedan descarta
   hexágonos planos de igual área en Albers para Sudamérica (cada tamaño se extrae aparte).
 - **Por qué res 5 y res 6.** En los antecedentes con grilla, las celdas van de 5 a 60 km. Res 4
   (~1.450 km² de media) deja ~3 celdas por región mínima (criterio de Erni, ~4.388 km²); res 7
-  (~669 mil celdas) no entra en el código empaquetado de 32 bits y obliga a subir ~669 mil polígonos.
+  (~668 mil celdas) no entra en el código empaquetado de 32 bits y obliga a subir ~668 mil polígonos.
 - **Por qué no es una decisión de cómputo.** Medido: el tamaño de celda no cambia el costo de la
   reducción; lo que cuesta es recorrer los píxeles (`docs/notes/01-grid_and_compute.md`).
+- **Res 5 armada desde res 6 (precisión del 2026-10-19).** Los 7 hijos no llenan exacto su padre de
+  res 5 (su unión tiene forma de copo): sumar las áreas de los hijos es exacto, pero en un mapa en
+  res 5 cada celda se dibuja como la unión de sus hijos, no con el contorno H3 de res 5. Los 96.461
+  hexágonos de res 6 tienen 14.137 padres (`workflow/01-hex_grid.py`; `docs/01-hex_grid.md`, "Trampas").
 
 ## D2 · Período · abierta
 
@@ -109,7 +113,7 @@ cuesta es recorrer los píxeles, no la cantidad de grupos (`docs/notes/01-grid_a
 
 Por qué un solo barrido: la cobertura del año previo se lee una vez por año en vez de dos, y
 numerador y denominador salen de la misma lectura a 30 m. El código entra en un entero de 32 bits
-hasta res 6 (máximo 1.256.356.138 con 96.643 celdas y clase 77, sobre 2.147.483.647). Una tarea por
+hasta res 6 (máximo 1.253.990.138 con 96.461 celdas y clase 77, sobre 2.147.483.647). Una tarea por
 año, para acotar la memoria del reductor agrupado.
 
 De este barrido salen la tasa por cobertura (D4), la fracción quemada por año, la estacionalidad

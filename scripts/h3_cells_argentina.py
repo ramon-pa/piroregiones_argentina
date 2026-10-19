@@ -19,36 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import constants as C  # noqa: E402
-
-ISLANDS = "Islas del Atlántico Sur"
-SIMPLIFY_M = 500
-
-
-def continental_polygon(ee):
-    """MultiPolygon GeoJSON of continental Argentina, simplified to SIMPLIFY_M metres."""
-    fc = ee.FeatureCollection(C.ECOREGIONS_13).filter(ee.Filter.neq(C.ECOREGION_NAME_FIELD, ISLANDS))
-    geom = (fc.geometry(maxError=SIMPLIFY_M).simplify(maxError=SIMPLIFY_M)
-            .transform("EPSG:4326", maxError=SIMPLIFY_M).getInfo())
-    # Simplification leaves degenerate points and lines in a GeometryCollection: keep polygons only.
-    parts = geom["geometries"] if geom["type"] == "GeometryCollection" else [geom]
-    polys = []
-    for g in parts:
-        if g["type"] == "Polygon":
-            polys.append(g["coordinates"])
-        elif g["type"] == "MultiPolygon":
-            polys.extend(g["coordinates"])
-    return {"type": "MultiPolygon", "coordinates": polys}
-
-
-def geodesic_area_km2(multipolygon):
-    from pyproj import Geod
-    geod = Geod(ellps="WGS84")
-    total = 0.0
-    for poly in multipolygon["coordinates"]:
-        for i, ring in enumerate(poly):
-            a, _ = geod.polygon_area_perimeter([c[0] for c in ring], [c[1] for c in ring])
-            total += abs(a) if i == 0 else -abs(a)
-    return total / 1e6
+from utils.aoi import continental_polygon, geodesic_area_km2  # noqa: E402
 
 
 def main():
@@ -57,12 +28,13 @@ def main():
     ee.Initialize(project=os.getenv("GEE_PROJECT", C.GEE_PROJECT))
     geom = continental_polygon(ee)
     print(f"continental Argentina: {len(geom['coordinates'])} polygons, "
-          f"{geodesic_area_km2(geom):,.0f} km2 (simplified to {SIMPLIFY_M} m)\n")
+          f"{geodesic_area_km2(geom):,.0f} km2 (simplified to {C.AOI_SIMPLIFY_M} m)\n")
     shape = h3.geo_to_h3shape(geom)
 
     print("cells touching the polygon (contain='overlap')")
     for r in (4, 5, 6, 7):
-        cells = h3.h3shape_to_cells_experimental(shape, r, contain="overlap")
+        # A cell touching two of the polygons comes back once per polygon: deduplicate.
+        cells = set(h3.h3shape_to_cells_experimental(shape, r, contain="overlap"))
         areas = [h3.cell_area(c, "km^2") for c in cells]
         print(f"  res {r}: {len(cells):>8,} cells   area {min(areas):8.1f} to {max(areas):8.1f} km2")
 

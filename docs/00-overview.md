@@ -30,7 +30,7 @@ ecorregiones de Burkart et al. 1999, y dónde los límites coinciden o se separa
 | Paso | Hace | Doc |
 |---|---|---|
 | 00 | chequeo de solo lectura de todos los insumos de GEE | `scripts/check_assets.py` (docstring) |
-| 01 | grilla H3 sobre Argentina (res 6) | pendiente |
+| 01 | grilla H3 sobre Argentina (res 6) | [`01-hex_grid.md`](01-hex_grid.md) |
 | 02 | área disponible por cobertura, por celda y año | pendiente |
 | 03 | área quemada por celda × año × mes × cobertura × tamaño (02 y 03 pueden ir en un solo barrido por año, D6) | pendiente |
 | 04 | frecuencia de quema por celda, desde `frequency_burned_v2` (D8) | pendiente |

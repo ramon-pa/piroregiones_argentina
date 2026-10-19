@@ -10,7 +10,9 @@ Destino: trabajo final de Geo Dojo y taller de MapBiomas (`CLAUDE.md`, "Overview
 Lo que corre en GEE está definido: el barrido D6 (27 tareas, con mes y clase de tamaño), la
 frecuencia desde `frequency_burned_v2` (D8) y la subida de la grilla H3. Salidas según D7: grilla al
 asset `ANALYSES/pyrorregions` (escritura probada), tablas CSV al Drive propio. D6 pasó la prueba de
-Córdoba (`docs/notes/02-sweep_cordoba.md`). Lo próximo es la grilla H3 (ítem 1 de "Siguiente").
+Córdoba (`docs/notes/02-sweep_cordoba.md`). Grilla H3 armada (96.461 celdas) y **subiéndose al asset
+`h3_res6`** desde el 2026-10-19 (tarea de carga de Ramón). Al retomar: ver en Tasks que terminó y
+correr `uv run python workflow/01-hex_grid.py --check`; si da 2/2, el paso 01 está listo y sigue el 02.
 
 ## Ahora
 
@@ -23,10 +25,9 @@ Córdoba (`docs/notes/02-sweep_cordoba.md`). Lo próximo es la grilla H3 (ítem 
 
 ## Siguiente
 
-1. [ ] Paso 01, grilla H3 en res 6: `workflow/01-hex_grid.py` + `docs/01-hex_grid.md`. Ids enteros
-   0..N−1 con tabla de equivalencia al índice H3. Subir los ~97 mil hexágonos a `OUTPUT_ROOT` como
-   shapefile zip por la UI (`gee-gotchas.md`, límite de ~17k features al exportar desde memoria).
-   Control: el área de los hexágonos pintados cubre el país sin huecos ni solapes.
+1. [ ] Paso 01, grilla H3 en res 6 (`docs/01-hex_grid.md`). Armada (`--build`) y zip subido por la UI
+   a `H3_GRID_ASSET` el 2026-10-19 (carga en curso). Falta: `--check` y registrar su resultado en
+   `CLAUDE.md` (fila "Grilla H3 res 6 armada").
 2. [ ] Paso 02, el barrido D6: `workflow/02-sweep.py` + `docs/02-sweep.md`, una tarea batch por año,
    CSV a `DRIVE_FOLDER`, se puede volver a correr sin duplicar, descripciones con prefijo `piro`.
    Modelo: `statistics/*_export.py` del repo de fuego. Los controles de `--sweep` corren sobre cada

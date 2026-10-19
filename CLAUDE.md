@@ -35,6 +35,8 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
   publicado (D8), salidas según D7. Nada exportado todavía.
 - Barrido D6 probado en Córdoba con hexágonos reales: todos los controles en verde
   (`docs/notes/02-sweep_cordoba.md`). Abierto: la memoria con ~1 millón de grupos por año.
+- Paso 01: grilla H3 res 6 armada (96.461 celdas, `docs/01-hex_grid.md`); el zip se está subiendo al
+  asset `h3_res6` (2026-10-19). Falta `workflow/01-hex_grid.py --check`.
 - Decisiones: `docs/decisions.md` (D1, D4, D6 a D9 acordadas; D2, D3, D5 abiertas).
 - Próximo: `ROADMAP.md`.
 
@@ -52,11 +54,14 @@ Es una vista de este repo; si difieren, manda el repo.
 | `pyproject.toml`, `uv.lock`, `.python-version` | entorno (uv, Python 3.12); dependencias solo cuando un paso las necesita |
 | `.env.example` | variable `GEE_PROJECT` opcional |
 | `utils/constants.py` | **única fuente de verdad**: assets, años, grilla, prefijo de tareas |
+| `utils/aoi.py` | el polígono de la Argentina continental, compartido por el paso 01 y el conteo de celdas |
+| `workflow/01-hex_grid.py` | paso 01: arma la grilla H3 y el zip para subir (`--build`); controla el asset (`--check`) |
 | `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
 | `scripts/h3_cells_argentina.py` | cuántas celdas H3 cubren el país y cuánto varía su área |
 | `scripts/bench_interactive.py` | pruebas interactivas de costo y precisión de los resúmenes por celda, y del barrido D6 (`--sweep`) |
 | `docs/00-overview.md` | el método en una página y la lista de pasos |
 | `docs/TEMPLATE.md` | forma de los docs de paso (adaptada del repo de fuego) |
+| `docs/01-hex_grid.md` | doc del paso 01 |
 | `docs/decisions.md` | decisiones de diseño, con estado y fundamento |
 | `docs/references.md` | notas por paper, con qué se leyó de cada uno; herramientas verificadas |
 | `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
@@ -157,16 +162,19 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Cicatrices < 10 ha | 76,14 % del número, 5,67 % del área | idem | idem |
 | Área del píxel nativo a −22° y −55° | ~829 y ~513 m² | cuenta exploratoria (scratchpad, 2026-10-14) | **exploratorio**: no hay script en el repo |
 | Costo de una reducción agrupada interactiva, 1 año, recuadro de 1° en Córdoba | ~3 a 6 s a 30 m, sin diferencia consistente entre celdas tipo res 5 y res 6 | `scripts/bench_interactive.py`, 2026-10-17 | verificado (tiempos varían entre corridas) |
-| Celdas H3 que tocan la Argentina continental (13 ecorregiones menos Islas del Atlántico Sur, simplificado a 500 m, 2.795.123 km²) | res 4: 2.310 · res 5: 14.312 · res 6: 96.643 · res 7: 668.539. Res 5 y 6: p5 a p95 de área 1,38 veces, extremos 1,59, sin pentágonos | `scripts/h3_cells_argentina.py`, 2026-10-17 | verificado |
+| Celdas H3 que tocan la Argentina continental (13 ecorregiones menos Islas del Atlántico Sur, simplificado a 500 m, 2.795.123 km²) | res 4: 2.125 · res 5: 14.124 · res 6: 96.461 · res 7: 668.344 (únicas; corregido el 2026-10-19, antes contaba duplicadas). Res 5 y 6: p5 a p95 de área 1,38 veces, extremos 1,59, sin pentágonos | `scripts/h3_cells_argentina.py`, 2026-10-19 | verificado |
 | Mes de quema y clase de tamaño: enmascarados donde no hay quema, y coinciden píxel a píxel | 0 píxeles con uno y sin el otro (recuadro −64,6/−64,2, −31,4/−31,0; 2003, 2013, 2020) | comando ad hoc, 2026-10-19 | verificado; **sin script en el repo**: se repite en la prueba de Córdoba |
 | Barrido D6 en Córdoba (401 hexágonos H3 res 6, 1999, 2010, 2025) | igual a los dos resúmenes separados (diferencia 0,0000 ha); 2.525 a 3.522 filas y 3 a 6 s por año; 0,6 a 0,95 % de lo quemado sobre clases no quemables | `scripts/bench_interactive.py --sweep`, 2026-10-19; `docs/notes/02-sweep_cordoba.md` | verificado |
-| Código máximo de D6 en res 6 | 1.256.356.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
+| Grilla H3 res 6 armada | 96.461 celdas, ids 0..96.460, sin pentágonos ni repetidas; 14.137 padres de res 5; 2.845.253 km² sumando celdas enteras (las del borde salen del país) | `workflow/01-hex_grid.py --build`, 2026-10-19 | verificado; falta subirla y `--check` |
+| Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
 
 ## 6. Known issues and fixes
 
 - **Subproductos `_v2` fuera de la grilla nativa.** Ver sección 4.
+- **`h3` con `contain="overlap"` repite celdas** que tocan más de un polígono del país (182 copias en
+  res 6). Deduplicar siempre. Los conteos del 17-oct estaban inflados y se corrigieron el 19-oct.
 - **Lo no quemado está enmascarado, no en 0** (mes de quema, clase de tamaño, frecuencia). Hacer
   `unmask(0)` antes de cualquier suma o código; si no, el área disponible sale solo de lo quemado.
   La cobertura enmascarada pasa a clase 0 (no observada). Ver D6 y D8.
