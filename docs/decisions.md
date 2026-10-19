@@ -96,19 +96,99 @@ con enlace de Ward, que es el método de Boulanger et al. 2014, con `min_bound` 
 tamaño mínimo. Alternativas en `spopt`. Ver `docs/references.md`, "Herramientas". Se verificaron las
 firmas y la documentación; no se corrió ningún análisis.
 
-## D6 · Un solo barrido por año · propuesta (2026-10-17)
+## D6 · Un solo barrido por año · acordada (2026-10-19)
 
 Cobertura disponible y quemado salen de **una sola reducción por año**, con un código empaquetado
-`celda × 13.000 + clase(Y−1) × 130 + mes (0 = no quemado) × 10 + clase de tamaño`. Sumando todas las
-filas de una celda y clase sale el área disponible; sumando las de mes > 0, el área quemada.
+`celda × 13.000 + clase(Y−1) × 130 + mes (0 = no quemado) × 10 + clase de tamaño (0 = no quemado)`.
+Sumando todas las filas de una celda y clase sale el área disponible; sumando las de mes > 0, el
+área quemada. Los multiplicadores viven en `utils/constants.py`.
 
-Por qué: la cobertura del año previo se lee una vez por año en vez de dos, y numerador y denominador
-salen de la misma lectura a 30 m. El código entra en un entero de 32 bits hasta res 6 (~1.256
-millones con 96.643 celdas, sobre un máximo de 2.147 millones). Una tarea por año, para acotar la
-memoria del reductor agrupado.
+**El mes se queda en el código** (Ramón, 2026-10-19): en qué mes se quema cada hexágono, y cada
+cobertura dentro de él, es una variable central para separar regiones. No agrega pasadas: lo que
+cuesta es recorrer los píxeles, no la cantidad de grupos (`docs/notes/01-grid_and_compute.md`).
+
+Por qué un solo barrido: la cobertura del año previo se lee una vez por año en vez de dos, y
+numerador y denominador salen de la misma lectura a 30 m. El código entra en un entero de 32 bits
+hasta res 6 (máximo 1.256.356.138 con 96.643 celdas y clase 77, sobre 2.147.483.647). Una tarea por
+año, para acotar la memoria del reductor agrupado.
+
+De este barrido salen la tasa por cobertura (D4), la fracción quemada por año, la estacionalidad
+(total y por cobertura) y los tamaños. Por eso no se usan `annual_burned_v2` ni `monthly_burned_v2`:
+darían lo mismo desde otra grilla (EPSG:3857).
+
+Insumos, todos en la grilla nativa (`CLAUDE.md`, "GEE asset paths"):
+- mes: `fire_mask_v2` del año Y;
+- clase de tamaño: `annual_burned_scar_size_range_v2`, banda del año Y (clases 1 a 8);
+- cobertura: col-3, `classification_<Y−1>`;
+- celda: la grilla H3 pintada sobre un fondo enmascarado (un píxel fuera de toda celda no entra).
+
+Reglas que evitan errores silenciosos (medidas el 2026-10-19, recuadro de Córdoba, 2003, 2013 y 2020):
+- **Lo no quemado viene enmascarado, no en 0**, en el mes y en el tamaño. Hacer `unmask(0)` en los
+  dos antes de armar el código; si no, el área disponible saldría solo de lo quemado.
+- **Mes y tamaño coinciden píxel a píxel**: 0 píxeles con mes y sin tamaño, 0 al revés. Se vuelve a
+  comprobar en cada corrida (fila con mes > 0 y tamaño 0, o al revés, es un error).
+- **Cobertura enmascarada → clase 0** (`unmask(0)`), para que su área quede a la vista como "no
+  observada" en vez de desaparecer.
 
 Descartado: leer la cobertura a menor resolución. Ahorra ~2 a 3 veces el tiempo, pero las pirámides
 por moda subestiman hasta 26 % la clase Pasturas a 240 m (`docs/notes/01-grid_and_compute.md`).
 
-Pendiente: probarlo en el recuadro de Córdoba (tiempo, filas, y que cierre contra los dos resúmenes
-por separado). La frecuencia (paso 04) queda aparte: necesita los 27 años de cada píxel juntos.
+Pendiente: la prueba en el recuadro de Córdoba (`ROADMAP.md`, ítem 1 de "Siguiente").
+
+## D7 · Dónde van las salidas · acordada (2026-10-19)
+
+- **Asset** `FIRE/COLLECTION-1/ANALYSES/pyrorregions` (`OUTPUT_ROOT`): solo lo que GEE vuelve a
+  leer, la grilla H3, y al final, si se quiere mostrar en GEE, los polígonos de pirorregiones.
+  Iván pidió esa carpeta (mail del 2026-10-19) porque no hay espacio en Google Cloud, solo en la
+  cuota de assets, y que lo guardado sea entero. La creó el 2026-10-19; la escritura con la cuenta
+  ramonpagis se probó ese día creando y borrando una subcarpeta.
+- **Tablas** (27 de D6 y 1 de frecuencia): CSV con `Export.table.toDrive` a la carpeta
+  `DRIVE_FOLDER` del Drive propio, y de ahí a `data/` (fuera de git). Todo el análisis es local, así
+  que guardarlas como asset obligaría a bajarlas igual. Así exporta sus tablas el equipo de fuego
+  (`statistics.md`, sección del denominador quemable). Se pueden regenerar volviendo a correr.
+- **Ningún ráster**, salvo que pintar la grilla en cada tarea resulte lento: en ese caso, el ráster
+  de ids de celda, en `int32`, en `OUTPUT_ROOT`.
+- Compute: proyecto `mapbiomas-argentina` (Iván: "mapbiomas-argentina o mapbiomas-fuego, da igual").
+
+## D8 · Frecuencia desde el producto publicado · acordada (2026-10-19)
+
+La frecuencia (paso 04) sale de `frequency_burned_v2`, banda `fire_frequency_1999_2025` (años
+calendario quemados de 27). No se calcula: necesitaría los 27 años de cada píxel juntos.
+
+Está en EPSG:3857, fuera de la grilla nativa. No importa porque **no se cruza píxel a píxel con la
+cobertura**: solo se resume por celda (área quemada 1, 2, 3... veces). El equipo de fuego lo usa así
+y lo comprobó: el promedio ponderado por área da 0,838 % nacional, igual a 63,23 Mha / 279,5 Mha /
+27 años (`statistics/burn_perc_export.py`; `statistics.md`, "EPSG:3857 is a display grid, not a
+measurement grid"). Medido por ellos, no por nosotros.
+
+Sus dos trampas aplican igual:
+- el producto tiene `selfMask`: lo nunca quemado falta. No se resume el área de 0 veces desde el
+  producto (incluiría agua y roca); sale del denominador quemable (D9) menos lo quemado 1 o más veces;
+- en 3857 el área real del píxel cae con la latitud: sumar con `pixelArea()`, nunca contar píxeles.
+
+Control: por celda, `Σ k × área quemada k veces` (frecuencia) tiene que igualar la suma de las áreas
+quemadas de los 27 años (D6). La diferencia mide el efecto de mezclar las dos grillas; sin medir.
+
+No se usa `frequency_burned_coverage_v2`: en la ventana completa su clase es la de 2025
+(`07-published_products.md`, "Frequency windows are two-sided"), no la del año previo a cada fuego.
+
+## D9 · Denominador quemable · acordada (2026-10-19)
+
+Los porcentajes que no van por cobertura (fracción quemada por año, frecuencia) se calculan sobre el
+**área quemable** de la celda, no sobre su área total (Ramón, 2026-10-19). Así una celda con mucha
+agua, salina o roca no parece quemarse poco.
+
+Quemable = suma de las clases de `BURNABLE_CLASSES` del año Y−1, que sale del barrido D6 sin nada
+extra en GEE. Las listas de clases son las del equipo de fuego (`statistics/legends.py`), para que
+los porcentajes sean comparables con los suyos; 22 y 26 los decidió no quemables Iván (2026-09-11,
+según ese archivo). Clases 0 y 27, no observadas: fuera del numerador y del denominador.
+
+Diferencia con el equipo de fuego: ellos usan **una** capa quemable fija (mayoría 1998 a 2024); acá
+es la del año Y−1 de cada año, coherente con D4. Para la frecuencia, que no tiene año, se usa el
+promedio de las 27 áreas quemables anuales de la celda.
+
+Control: se informa el área quemada sobre clases no quemables o no observadas. Se espera chica pero
+no nula: el producto no admite **semillas** sobre clases no quemables del año previo (verificado por
+el equipo de fuego en FY2000, 2014 y 2023, comentario de `CLASSIFICATION_COLLECTIONS` en
+`utils/constants.py` de su repo), pero la cicatriz que crece desde una semilla sí puede cubrirlas.
+Ese área queda fuera de las tasas y se reporta, no se descarta en silencio.

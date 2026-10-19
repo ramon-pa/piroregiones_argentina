@@ -28,18 +28,34 @@ MONTH_OF_BURN_COL = f"{_FIRE_ROOT}/CLASSIFICATION_COLLECTIONS/collection1_fire_m
 MONTH_OF_BURN_IMAGE = "mapbiomas_argentina_fire_collection1_fire_mask_v2_{year}"
 MONTH_OF_BURN_BAND = "burned_monthly"
 
-# Scar area (ha) per burned pixel, one band per year, on the native grid.
-SCAR_AREA = (f"{_FIRE_ROOT}/FINAL_PRODUCTS/"
-             "mapbiomas_argentina_fire_collection1_annual_burned_area_ha_v2")
-SCAR_AREA_BAND = "scar_area_ha_{year}"
+# Scar size class (1-8) per burned pixel, one band per year, on the native grid. The band is named
+# scar_area_ha_<year> on purpose (fire repo, 07-published_products.md). Unburned pixels are MASKED,
+# exactly where the month of burn is masked (checked in Córdoba for 2003, 2013, 2020).
+SCAR_SIZE = (f"{_FIRE_ROOT}/FINAL_PRODUCTS/"
+             "mapbiomas_argentina_fire_collection1_annual_burned_scar_size_range_v2")
+SCAR_SIZE_BAND = "scar_area_ha_{year}"
 
-# NOT used: the 07d subproducts (annual_burned_coverage_v2, frequency_burned_v2, ...) are stored in
-# EPSG:3857, off the native grid, and their *_coverage variants cross the SAME year, not Y-1.
+# Years burned 1999-2025 per pixel (decision D8). Stored in EPSG:3857 @ 30 m, OFF the native grid:
+# it is reduced on its own grid, weighted by pixelArea(), and never crossed pixel by pixel with
+# land cover. selfMask'ed: never burned is MASKED, not 0.
+FREQUENCY = f"{_FIRE_ROOT}/FINAL_PRODUCTS/mapbiomas_argentina_fire_collection1_frequency_burned_v2"
+FREQUENCY_BAND = "fire_frequency_1999_2025"
+FREQUENCY_CRS = "EPSG:3857"
+
+# NOT used: the other 07d subproducts. They are in EPSG:3857, off the native grid, and the
+# *_coverage variants cross the SAME land-cover year, not Y-1 (CLAUDE.md, "GEE asset paths").
 
 # --- Land cover, MapBiomas Argentina collection 3 ----------------------------------------------
 LULC = ("projects/mapbiomas-argentina/assets/LAND-COVER/COLLECTION-3/INTEGRATION/"
         "mapbiomas_argentina_collection3_pb")
 LULC_BAND = "classification_{year}"
+
+# Burnable verdict per col-3 class, copied from the fire repo (statistics/legends.py, BURNABLE and
+# NON_BURNABLE) so our percentages share their denominator (decision D9). 0 and 27 are "not
+# observed": in neither list, they enter no denominator. Highest class code is 77.
+BURNABLE_CLASSES = [1, 3, 4, 6, 9, 14, 15, 18, 19, 21, 36, 10, 11, 12, 63, 66, 73, 77]
+NON_BURNABLE_CLASSES = [22, 24, 25, 26, 33, 34]
+NOT_OBSERVED_CLASSES = [0, 27]  # masked LULC pixels are unmasked to 0 so their area stays visible
 
 # --- Ecoregions, Burkart et al. 1999 (APN) -----------------------------------------------------
 _ANC_VEC = "projects/mapbiomas-argentina/assets/ANCILLARY_DATA/VECTOR/ARG"
@@ -53,3 +69,20 @@ ECOREGION_NAME_FIELD = "LEVEL_2"
 GRID_CRS = "EPSG:4326"
 GRID_TRANSFORM = [0.000269494585236, 0, -73.58468801489491,
                   0, -0.000269494585236, -21.764113209062533]
+
+# --- H3 grid and the packed code of the yearly sweep (decision D6) ------------------------------
+H3_RES = 6  # extraction resolution; res 5 is built locally by summing children (decision D1)
+
+# code = cell * CODE_CELL + class * CODE_CLASS + month * CODE_MONTH + size_class
+# month 0..12 and size 0..8 (0 = not burned) fit below CODE_CLASS (12*10 + 8 = 128 < 130); class
+# 0..77 fits below 100; ~96.6k cells * 13,000 = ~1.26e9 < 2**31 - 1, so the code is an int32.
+CODE_CELL = 13_000
+CODE_CLASS = 130
+CODE_MONTH = 10
+
+# --- Outputs (decision D7) ---------------------------------------------------------------------
+# GEE assets: only what GEE reads again (the H3 grid) and the final regions. Folder created by Iván
+# on 2026-10-19; write access checked the same day.
+OUTPUT_ROOT = "projects/mapbiomas-argentina/assets/FIRE/COLLECTION-1/ANALYSES/pyrorregions"
+# Tables (one CSV per task) go to this folder of the user's own Drive and are analysed locally.
+DRIVE_FOLDER = "piro_gee"

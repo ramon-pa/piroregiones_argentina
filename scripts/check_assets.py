@@ -62,9 +62,16 @@ def main():
         results.append((lab, p))
     results.append(("month of burn collection", probs))
 
-    # Scar area: one band per fire year.
-    results.append(check_raster(ee, "scar area (ha)", ee.Image(C.SCAR_AREA),
-                                [C.SCAR_AREA_BAND.format(year=y) for y in years]))
+    # Scar size class: one band per fire year.
+    results.append(check_raster(ee, "scar size class", ee.Image(C.SCAR_SIZE),
+                                [C.SCAR_SIZE_BAND.format(year=y) for y in years]))
+
+    # Frequency: off the native grid by design (D8), so check that it is still where we expect it.
+    freq = ee.Image(C.FREQUENCY)
+    freq_bands = freq.bandNames().getInfo()
+    freq_crs = freq.select(C.FREQUENCY_BAND).projection().crs().getInfo() if C.FREQUENCY_BAND in freq_bands else None
+    p = [] if freq_crs == C.FREQUENCY_CRS else [f"band {C.FREQUENCY_BAND} crs {freq_crs}, expected {C.FREQUENCY_CRS}"]
+    results.append((f"frequency ({C.FREQUENCY_BAND}, {C.FREQUENCY_CRS})", p))
 
     # Land cover: must cover Y-1 for the first fire year through the last fire year.
     lulc = ee.Image(C.LULC)
@@ -83,6 +90,13 @@ def main():
         names = fc.aggregate_array(C.ECOREGION_NAME_FIELD).getInfo()
         p = [] if size == n and all(names) else [f"{size} features, expected {n}; empty names: {names.count(None)}"]
         results.append((f"{label} ({size} features)", p))
+
+    # Output folder: exists and is a folder (write access is not tested here: this script is read-only).
+    try:
+        kind = ee.data.getAsset(C.OUTPUT_ROOT)["type"]
+    except ee.EEException as e:
+        kind = f"missing ({e})"
+    results.append(("output folder", [] if kind == "FOLDER" else [f"{C.OUTPUT_ROOT}: {kind}"]))
 
     failed = 0
     for label, problems in results:
