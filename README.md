@@ -21,7 +21,7 @@ git clone git@github.com:ramon-pa/piroregiones_argentina.git
 cd piroregiones_argentina
 uv sync                                   # crea .venv con Python 3.12
 earthengine authenticate                  # una sola vez por máquina
-uv run python scripts/check_assets.py     # debe terminar en "7/7 checks passed"
+uv run python scripts/check_assets.py     # debe terminar en "9/9 checks passed"
 ```
 
 El proyecto de cómputo de GEE sale de `utils/constants.py`. Para usar otro, exportar

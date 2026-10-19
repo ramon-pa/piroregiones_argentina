@@ -33,6 +33,8 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
 - Grilla y cómputo medidos sin exportar nada (`docs/notes/01-grid_and_compute.md`).
 - Qué corre en GEE, definido: barrido D6 por año (con mes y tamaño), frecuencia desde el producto
   publicado (D8), salidas según D7. Nada exportado todavía.
+- Barrido D6 probado en Córdoba con hexágonos reales: todos los controles en verde
+  (`docs/notes/02-sweep_cordoba.md`). Abierto: la memoria con ~1 millón de grupos por año.
 - Decisiones: `docs/decisions.md` (D1, D4, D6 a D9 acordadas; D2, D3, D5 abiertas).
 - Próximo: `ROADMAP.md`.
 
@@ -52,13 +54,14 @@ Es una vista de este repo; si difieren, manda el repo.
 | `utils/constants.py` | **única fuente de verdad**: assets, años, grilla, prefijo de tareas |
 | `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
 | `scripts/h3_cells_argentina.py` | cuántas celdas H3 cubren el país y cuánto varía su área |
-| `scripts/bench_interactive.py` | pruebas interactivas de costo y precisión de los resúmenes por celda |
+| `scripts/bench_interactive.py` | pruebas interactivas de costo y precisión de los resúmenes por celda, y del barrido D6 (`--sweep`) |
 | `docs/00-overview.md` | el método en una página y la lista de pasos |
 | `docs/TEMPLATE.md` | forma de los docs de paso (adaptada del repo de fuego) |
 | `docs/decisions.md` | decisiones de diseño, con estado y fundamento |
 | `docs/references.md` | notas por paper, con qué se leyó de cada uno; herramientas verificadas |
 | `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
 | `docs/notes/01-grid_and_compute.md` | lo medido para elegir la grilla y la estrategia de cómputo |
+| `docs/notes/02-sweep_cordoba.md` | la prueba del barrido único en Córdoba, con sus controles |
 
 ## 4. GEE asset paths
 
@@ -156,6 +159,7 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Costo de una reducción agrupada interactiva, 1 año, recuadro de 1° en Córdoba | ~3 a 6 s a 30 m, sin diferencia consistente entre celdas tipo res 5 y res 6 | `scripts/bench_interactive.py`, 2026-10-17 | verificado (tiempos varían entre corridas) |
 | Celdas H3 que tocan la Argentina continental (13 ecorregiones menos Islas del Atlántico Sur, simplificado a 500 m, 2.795.123 km²) | res 4: 2.310 · res 5: 14.312 · res 6: 96.643 · res 7: 668.539. Res 5 y 6: p5 a p95 de área 1,38 veces, extremos 1,59, sin pentágonos | `scripts/h3_cells_argentina.py`, 2026-10-17 | verificado |
 | Mes de quema y clase de tamaño: enmascarados donde no hay quema, y coinciden píxel a píxel | 0 píxeles con uno y sin el otro (recuadro −64,6/−64,2, −31,4/−31,0; 2003, 2013, 2020) | comando ad hoc, 2026-10-19 | verificado; **sin script en el repo**: se repite en la prueba de Córdoba |
+| Barrido D6 en Córdoba (401 hexágonos H3 res 6, 1999, 2010, 2025) | igual a los dos resúmenes separados (diferencia 0,0000 ha); 2.525 a 3.522 filas y 3 a 6 s por año; 0,6 a 0,95 % de lo quemado sobre clases no quemables | `scripts/bench_interactive.py --sweep`, 2026-10-19; `docs/notes/02-sweep_cordoba.md` | verificado |
 | Código máximo de D6 en res 6 | 1.256.356.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
