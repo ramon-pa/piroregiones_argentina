@@ -35,7 +35,7 @@ ecorregiones de Burkart et al. 1999, y dónde los límites coinciden o se separa
 | 03 | (dentro del 02) | |
 | 04 | frecuencia de quema por celda, desde `frequency_burned_v2` (D8) | [`04-frequency.md`](04-frequency.md) |
 | 05 | tablas por celda decodificadas, con controles cruzados | [`05-cell_table.md`](05-cell_table.md) |
-| 06 | variables del régimen | pendiente |
+| 06 | variables del régimen | [`06-variables.md`](06-variables.md) |
 | 07 | pirorregiones | pendiente |
 | 08 | tipos de régimen (opcional) | pendiente |
 | 09 | comparación con ecorregiones | pendiente |

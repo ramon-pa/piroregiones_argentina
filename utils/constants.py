@@ -75,6 +75,72 @@ ECOREGION_NAME_FIELD = "LEVEL_2"
 AOI_EXCLUDE = "Islas del Atlántico Sur"
 AOI_SIMPLIFY_M = 500
 
+# --- MapBiomas fire regions (for the fire team's land-cover families, step 06) -----------------
+# Region-id raster of the fire repo (utils/constants.py REGION_RASTER, built by its
+# scripts/export_region_raster.py), on the land-cover grid, with a 2 km buffer past the border:
+# 1 CUYO, 2 PAT, 3 PAMPA, 4 CHACO, 5 BA (Bosque Atlántico), 0 outside. Same numbering as
+# region_num in its config/veg_fire_remap.csv.
+REGION_RASTER = "projects/mapbiomas-argentina/assets/ANCILLARY_DATA/RASTER/ARG/ARG-Regiones-MapBiomas-buffer2km"
+REGION_BAND = "region_id"
+REGION_NAMES = {1: "CUYO", 2: "PAT", 3: "PAMPA", 4: "CHACO", 5: "BA"}
+# Land-cover family per (region, class): the fire team's veg_fire classes (fire repo,
+# collection-01/config/veg_fire_remap.csv, built on col-2 per statistics/legends.py) with the region
+# suffix dropped, e.g. forest-cerr_chaco and forest_pat are both "forest". Generated from that CSV
+# on 2026-10-26, not typed by hand. Non-burnable and non-observed rows left out. A (region, class)
+# pair missing here falls back to the class's most common family (step 06 reports that area).
+FAMILY_BY_REGION_CLASS = {
+    (1, 3): "forest",
+    (1, 4): "forest",
+    (1, 9): "agriculture",
+    (1, 11): "grassland",
+    (1, 12): "grassland",
+    (1, 19): "agriculture",
+    (1, 21): "grassland",
+    (1, 63): "grassland",
+    (1, 66): "shrubland",
+    (1, 77): "shrubland",
+    (2, 3): "forest",
+    (2, 6): "forest",
+    (2, 9): "forest",
+    (2, 11): "grassland",
+    (2, 12): "grassland",
+    (2, 21): "agriculture",
+    (2, 63): "grassland",
+    (2, 73): "grassland",
+    (2, 77): "shrubland",
+    (3, 3): "forest",
+    (3, 4): "forest",
+    (3, 6): "forest",
+    (3, 9): "forest",
+    (3, 11): "grassland",
+    (3, 12): "grassland",
+    (3, 15): "grassland",
+    (3, 19): "agriculture",
+    (3, 36): "forest",
+    (3, 66): "shrubland",
+    (3, 77): "shrubland",
+    (4, 3): "forest",
+    (4, 4): "forest",
+    (4, 6): "forest",
+    (4, 9): "forest",
+    (4, 11): "grassland",
+    (4, 12): "grassland",
+    (4, 15): "pasture",
+    (4, 19): "agriculture",
+    (4, 36): "agri_perennial",
+    (4, 63): "shrubland",
+    (4, 66): "shrubland",
+    (4, 77): "shrubland",
+    (5, 3): "forest",
+    (5, 9): "forest",
+    (5, 11): "grassland",
+    (5, 12): "grassland",
+    (5, 15): "pasture",
+    (5, 19): "pasture",
+    (5, 36): "agri_perennial",
+}
+FAMILIES = ["forest", "shrubland", "grassland", "pasture", "agriculture", "agri_perennial"]
+
 # --- Native grid -------------------------------------------------------------------------------
 # The fire product's 30 m lattice (the fire team's SNIC_CRS / SNIC_TRANSFORM). Pin both on every
 # export: scale=30 in EPSG:4326 is a different grid.
@@ -111,4 +177,6 @@ SWEEP_DIR = "data/sweep"  # where the step 02 CSVs are downloaded from Drive, ou
 FREQ_CODE_CELL = 100
 FREQ_TASK = TASK_PREFIX + "_freq_1999_2025"  # task description and CSV name of step 04
 FREQ_DIR = "data/frequency"  # where the step 04 CSV is downloaded from Drive, out of git
+REGION_TASK = TASK_PREFIX + "_cell_region"  # step 06: area of each region per cell
+REGION_DIR = "data/region"  # where the step 06 region CSV is downloaded, out of git
 TABLES_DIR = "data/tables"  # step 05: the decoded Parquet tables every local step reads, out of git

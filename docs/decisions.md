@@ -234,3 +234,42 @@ remapeo (`config/veg_fire_remap.csv` del repo de fuego), y ese remapeo depende d
 Áreas y tasas: `workflow/05-cell_table.py --classes`, 2026-10-26. [no verificado] si ese remapeo se armó sobre la col-3 o sobre una colección anterior:
 el repo de fuego dice que `veg_fire` queda congelado en la colección con la que se entrenó.
 
+
+## D11 · Familias de cobertura del equipo de fuego, con región · acordada (2026-10-26)
+
+**Acordado** (Ramón, 2026-10-26): las clases de cobertura se agrupan en las familias de la
+reclasificación para fuego del equipo de fuego (`config/veg_fire_remap.csv`, documentada en su
+`docs/02-vegetation_remap.md`): bosque, arbustal, pastizal, pastura, agricultura y cultivos
+perennes. La familia depende de la región de MapBiomas (por ejemplo, la 63 es arbustal en el Chaco y
+pastizal en Cuyo y Patagonia), así que cada celda toma su región mayoritaria del ráster de regiones
+del equipo de fuego (`REGION_RASTER`). Copiado a `FAMILY_BY_REGION_CLASS`, generado desde el CSV.
+
+Ese remapeo se armó sobre la col-2 (comentario de `statistics/legends.py` del repo de fuego); los
+códigos de clase que usa existen igual en la col-3. Un par región-clase que no figura toma la familia
+más común de esa clase: 0,52 Mha por año, 0,2 % del área quemable (`06-variables.py`, 2026-10-26).
+
+## D12 · Qué describe a cada celda en el clustering · acordada (2026-10-26)
+
+**Acordado** (Ramón, 2026-10-26, las cinco recomendaciones). Reemplaza el papel de D4 en el
+clustering: la tasa por cobertura deja de ser variable de celda.
+
+1. **Variables de fuego**: tasa de quema, variabilidad interanual, recurrencia, pico de la
+   temporada, duración de la temporada y proporción de lo quemado en cicatrices grandes. Más la
+   composición del área quemable por familia (D11) con peso 0,2 frente a 1,0, como Boulanger et al.
+   2014 (p. 368). La tasa por familia (D4) se calcula **por región** ya formada, donde las áreas son
+   grandes, y va a la ficha de cada región.
+2. **Celdas sin fuego**: se quedan, con valores como en Segura-Garcia et al. 2025 ("Methods",
+   (b)(i)): tasa, recurrencia y tamaño en el mínimo; pico y duración de la temporada, promedio de las
+   vecinas (acá anillo por anillo, porque los bloques sin fuego son grandes).
+3. **Recurrencia**: cuantil 99 de las veces quemado de cada hectárea, 0 incluido (Segura-Garcia).
+4. **Pico de la temporada**: mediana del área mensual en un año de fuego centrado en el mes de más
+   quema (Segura-Garcia); entra al clustering como seno y coseno, porque el mes es circular.
+   **Duración**: 2 desvíos del mes en ese año (Cattau et al. 2022, Tabla 1, p. 4, allí en días
+   julianos). El índice de concentración de Naval-Fernández et al. 2025 no se usó: el PDF no se pudo
+   bajar (403) y su fórmula no estaba en la ficha.
+5. **Ruido de celdas con poco fuego**: nada en el paso 06; en el paso 07 se prueba también res 5
+   (D1).
+
+Elecciones nuestras, sin paper, declaradas en `docs/06-variables.md`: el corte de 500 ha del tamaño,
+el CV de las celdas sin fuego, la posición del mes pico dentro del año centrado y la falta de
+suavizado de la ECDF.

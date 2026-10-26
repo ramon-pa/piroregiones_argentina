@@ -14,7 +14,10 @@ listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Paso 02 lis
 `data/sweep/`, 27/27 controles, suma igual a la del equipo de fuego (`docs/notes/03-sweep_national.md`).
 Paso 04 listo: frecuencia por celda, 2/2
 controles, igual al paso 02 (`docs/notes/04-frequency.md`). Todo lo de GEE está hecho. Paso 05 listo:
-tablas en `data/tables/`, 5/5 controles. Sigue el paso 06 (variables).
+tablas en `data/tables/`, 5/5 controles. Paso 06 listo: variables
+por celda, 5/5 controles. **Al retomar, decidir la resolución del paso 07**: REDCAP no entra en la
+Mac a res 6 (`docs/notes/07-redcap_scaling.md`). Propuesta: res 5 con REDCAP (opción A); para eso,
+agregar al 06 el cálculo a res 5 sumando áreas por `h3_r5`.
 
 ## Ahora
 
@@ -28,7 +31,7 @@ tablas en `data/tables/`, 5/5 controles. Sigue el paso 06 (variables).
 
 ## Siguiente
 
-1. [ ] Paso 06, variables del régimen, sobre `data/tables/`.
+1. [ ] Decidir A, B o C del paso 07 (`docs/notes/07-redcap_scaling.md`).
 2. [ ] Pasos 07 (probar los dos criterios de tamaño de D5), luego 09, 10 y la presentación.
 
 ## Hecho (borrar en la próxima pasada)
@@ -42,3 +45,4 @@ tablas en `data/tables/`, 5/5 controles. Sigue el paso 06 (variables).
 - [x] Paso 02: 27 años corridos y controlados; 63,235 Mha contra 63,23 del equipo de fuego; CSV viejo de 2025 a la papelera de Drive (2026-10-26).
 - [x] Paso 04: frecuencia por celda, 2/2 controles; `--status` y `--fetch` pasaron a `utils/gee_tasks.py` (2026-10-26).
 - [x] D2 acordada (1999 a 2025), D10 acordada (solo la clase 19 fuera de las tasas), D5 con plan para el 07; paso 05 listo, 5/5 (2026-10-26).
+- [x] D11 y D12 acordadas; paso 06 listo, 5/5 (2026-10-26).
