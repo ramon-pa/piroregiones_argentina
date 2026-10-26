@@ -12,7 +12,9 @@ frecuencia desde `frequency_burned_v2` (D8). Salidas según D7: grilla al asset 
 tablas CSV al Drive propio. D6 pasó la prueba de Córdoba (`docs/notes/02-sweep_cordoba.md`). Paso 01
 listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Paso 02 listo: 27 tablas en
 `data/sweep/`, 27/27 controles, suma igual a la del equipo de fuego (`docs/notes/03-sweep_national.md`).
-Sigue el paso 04, la frecuencia.
+Paso 04 listo: frecuencia por celda, 2/2
+controles, igual al paso 02 (`docs/notes/04-frequency.md`). Todo lo de GEE está hecho; sigue el
+paso 05, local.
 
 ## Ahora
 
@@ -25,8 +27,7 @@ Sigue el paso 04, la frecuencia.
 
 ## Siguiente
 
-1. [ ] Paso 04, frecuencia por celda (D8): una tarea, CSV a `DRIVE_FOLDER`, con el control contra D6.
-2. [ ] Pasos 05 a 07, luego 09, 10 y la presentación.
+1. [ ] Pasos 05 a 07, luego 09, 10 y la presentación.
 
 ## Hecho (borrar en la próxima pasada)
 
@@ -37,3 +38,4 @@ Sigue el paso 04, la frecuencia.
 - [x] Barrido D6 probado en Córdoba con hexágonos reales, todo en verde (2026-10-19).
 - [x] Paso 01: grilla H3 res 6 subida a `h3_res6` y `--check` 2/2 (2026-10-26).
 - [x] Paso 02: 27 años corridos y controlados; 63,235 Mha contra 63,23 del equipo de fuego; CSV viejo de 2025 a la papelera de Drive (2026-10-26).
+- [x] Paso 04: frecuencia por celda, 2/2 controles; `--status` y `--fetch` pasaron a `utils/gee_tasks.py` (2026-10-26).

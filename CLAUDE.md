@@ -39,6 +39,8 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
   `workflow/01-hex_grid.py --check` 2/2 el 2026-10-26.
 - Paso 02 listo (`docs/02-sweep.md`): los 27 años corridos, bajados a `data/sweep/` y controlados
   (27/27); la suma 1999 a 2025 coincide con el equipo de fuego (`docs/notes/03-sweep_national.md`).
+- Paso 04 listo (`docs/04-frequency.md`): frecuencia por celda bajada a `data/frequency/`, 2/2
+  controles; coincide con el paso 02 (`docs/notes/04-frequency.md`).
 - Decisiones: `docs/decisions.md` (D1, D4, D6 a D9 acordadas; D2, D3, D5 abiertas).
 - Próximo: `ROADMAP.md`.
 
@@ -58,6 +60,8 @@ Es una vista de este repo; si difieren, manda el repo.
 | `utils/constants.py` | **única fuente de verdad**: assets, años, grilla, prefijo de tareas |
 | `utils/aoi.py` | el polígono de la Argentina continental, compartido por el paso 01 y el conteo de celdas |
 | `workflow/01-hex_grid.py` | paso 01: arma la grilla H3 y el zip para subir (`--build`); controla el asset (`--check`) |
+| `workflow/04-frequency.py` | paso 04: frecuencia por celda desde el producto publicado; mismos modos que el 02 salvo `--summary` |
+| `utils/gee_tasks.py` | lanzador de reducciones agrupadas a Drive, estado de tareas y descarga, compartidos por los pasos 02 y 04 |
 | `workflow/02-sweep.py` | paso 02: barrido D6, una tarea por año (`--export`), estado (`--status`), descarga de Drive (`--fetch`) y controles (`--check`) |
 | `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
 | `scripts/h3_cells_argentina.py` | cuántas celdas H3 cubren el país y cuánto varía su área |
@@ -66,12 +70,14 @@ Es una vista de este repo; si difieren, manda el repo.
 | `docs/TEMPLATE.md` | forma de los docs de paso (adaptada del repo de fuego) |
 | `docs/01-hex_grid.md` | doc del paso 01 |
 | `docs/02-sweep.md` | doc del paso 02 |
+| `docs/04-frequency.md` | doc del paso 04 |
 | `docs/decisions.md` | decisiones de diseño, con estado y fundamento |
 | `docs/references.md` | notas por paper, con qué se leyó de cada uno; herramientas verificadas |
 | `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
 | `docs/notes/01-grid_and_compute.md` | lo medido para elegir la grilla y la estrategia de cómputo |
 | `docs/notes/02-sweep_cordoba.md` | la prueba del barrido único en Córdoba, con sus controles |
 | `docs/notes/03-sweep_national.md` | la corrida nacional de los 27 años, con la serie anual |
+| `docs/notes/04-frequency.md` | la corrida de la frecuencia y su comparación con el paso 02 |
 
 ## 4. GEE asset paths
 
@@ -175,6 +181,7 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Barrido D6 nacional, 2025 (cobertura 2024) | 646.922 filas, las 96.461 celdas; 2,1 min y 25.249 EECU-s; área por celda igual a la H3 (0,997 a 1,006); quemado 1.817.069 ha, 0,17 % sobre clases no quemables o no observadas | `workflow/02-sweep.py --fetch --years 2025`, 2026-10-26 | verificado |
 | Área quemada 2025 según la plataforma MapBiomas Argentina | 1.817.067 ha (2 ha menos que el barrido) | leída por Ramón en la plataforma, 2026-10-26 | dato externo, sin script |
 | Barrido D6 nacional, 27 años | 27/27 pasan `--check`; 571.183 a 815.332 filas por año; quemado 1999 a 2025: 63,235 Mha (equipo de fuego: 63,23, +0,008 %); serie anual en la nota | `workflow/02-sweep.py --fetch` y `--summary`, 2026-10-26; `docs/notes/03-sweep_national.md` | verificado |
+| Frecuencia por celda (paso 04) | 2/2 controles; años quemados × área = 63,235 Mha, igual al paso 02 (−0,001 %); 38,554 Mha quemadas al menos una vez; máximo 18 años de 27; por celda p1 a p99 de −7,3 a +6,9 %, ninguna celda con ≥ 100 ha desviada más de 5 % | `workflow/04-frequency.py --check`, 2026-10-26; `docs/notes/04-frequency.md` | verificado |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.

@@ -41,6 +41,9 @@ SCAR_SIZE_BAND = "scar_area_ha_{year}"
 FREQUENCY = f"{_FIRE_ROOT}/FINAL_PRODUCTS/mapbiomas_argentina_fire_collection1_frequency_burned_v2"
 FREQUENCY_BAND = "fire_frequency_1999_2025"
 FREQUENCY_CRS = "EPSG:3857"
+# Its own 30 m grid, read from the asset (projection().getInfo(), 2026-10-26). Step 04 reduces on
+# it, so no pixel of the product is resampled.
+FREQUENCY_TRANSFORM = [30, 0, -8189460, 0, -30, -2483190]
 
 # NOT used: the other 07d subproducts. They are in EPSG:3857, off the native grid, and the
 # *_coverage variants cross the SAME land-cover year, not Y-1 (CLAUDE.md, "GEE asset paths").
@@ -100,3 +103,7 @@ H3_GRID_ASSET = f"{OUTPUT_ROOT}/h3_res{H3_RES}"  # uploaded by hand from H3_GRID
 DRIVE_FOLDER = "piro_gee"
 SWEEP_TASK = TASK_PREFIX + "_sweep_{year}"  # task description and CSV name of step 02, per year
 SWEEP_DIR = "data/sweep"  # where the step 02 CSVs are downloaded from Drive, out of git
+# Step 04: code = cell * FREQ_CODE_CELL + years burned (1..27).
+FREQ_CODE_CELL = 100
+FREQ_TASK = TASK_PREFIX + "_freq_1999_2025"  # task description and CSV name of step 04
+FREQ_DIR = "data/frequency"  # where the step 04 CSV is downloaded from Drive, out of git

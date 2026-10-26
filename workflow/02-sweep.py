@@ -27,27 +27,20 @@ Doc: docs/02-sweep.md. Run from the repo root:
     uv run python workflow/02-sweep.py --summary
 """
 import argparse
-import os
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 from utils import constants as C  # noqa: E402
+from utils.gee_tasks import LIVE, export_grouped_area, fetch_csvs, init_ee, print_status, task_states  # noqa: E402
 
 SWEEP_DIR = REPO / C.SWEEP_DIR
 GRID = REPO / C.H3_GRID_DIR / f"h3_res{C.H3_RES}.parquet"
-LIVE = {"READY", "RUNNING", "COMPLETED"}  # states that mean "this year is done or on its way"
 # Burned area 1999-2025 from the fire team's toolkit, given to two decimals (fire repo,
 # statistics/docs/statistics.md, check "National annual burned: toolkit vs the object database").
 REF_BURNED_MHA = 63.23
 CELL_AREA_TOL = 0.01  # per-cell raster total vs H3 area; H3 is spherical, pixelArea() ellipsoidal
-
-
-def init_ee():
-    import ee
-    ee.Initialize(project=os.getenv("GEE_PROJECT", C.GEE_PROJECT))
-    return ee
 
 
 def sweep_code(ee, year):
@@ -64,78 +57,20 @@ def sweep_code(ee, year):
             .add(month.multiply(C.CODE_MONTH)).add(size).rename("code"))
 
 
-def our_tasks(ee):
-    """{description: state} of the step 02 tasks, newest first wins."""
-    prefix = C.SWEEP_TASK.split("{")[0]
-    out = {}
-    for t in ee.data.getTaskList():
-        d = t.get("description", "")
-        if d.startswith(prefix) and d not in out:
-            out[d] = t.get("state")
-    return out
-
-
 def export(years, force):
     ee = init_ee()
-    existing = our_tasks(ee)
-    box = ee.Geometry.Rectangle(C.GRID_BBOX, None, False)
+    existing = task_states(ee, C.SWEEP_TASK.split("{")[0])
     for year in years:
         desc = C.SWEEP_TASK.format(year=year)
         if existing.get(desc) in LIVE and not force:
             print(f"skip    {desc}: already {existing[desc]}")
             continue
-        groups = ee.List(ee.Image.pixelArea().divide(1e4).addBands(sweep_code(ee, year)).reduceRegion(
-            reducer=ee.Reducer.sum().group(groupField=1, groupName="code"), geometry=box,
-            crs=C.GRID_CRS, crsTransform=C.GRID_TRANSFORM, maxPixels=1e13).get("groups"))
-        fc = ee.FeatureCollection(groups.map(lambda g: ee.Feature(None, ee.Dictionary(g))))
-        task = ee.batch.Export.table.toDrive(
-            collection=fc, description=desc, folder=C.DRIVE_FOLDER, fileNamePrefix=desc,
-            fileFormat="CSV", selectors=["code", "sum"])
-        task.start()
+        task = export_grouped_area(ee, sweep_code(ee, year), desc, C.GRID_CRS, C.GRID_TRANSFORM)
         print(f"started {desc} -> Drive/{C.DRIVE_FOLDER}/{desc}.csv  (task {task.id})")
 
 
-def status():
-    ee = init_ee()
-    tasks = our_tasks(ee)
-    if not tasks:
-        print("no step 02 tasks in the project")
-    for desc, state in sorted(tasks.items()):
-        print(f"{state:<10} {desc}")
-
-
 def fetch(years):
-    import json
-
-    import ee
-    from google.oauth2.credentials import Credentials
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaIoBaseDownload
-
-    # The earthengine credentials carry the Drive scope. No quota project, as in the fire team's
-    # burnable_export.py --fetch: the call is billed to the OAuth client and needs no API enabled.
-    stored = json.loads(Path("~/.config/earthengine/credentials").expanduser().read_text())
-    creds = Credentials(None, refresh_token=stored["refresh_token"], token_uri=ee.oauth.TOKEN_URI,
-                        client_id=stored.get("client_id", ee.oauth.CLIENT_ID),
-                        client_secret=stored.get("client_secret", ee.oauth.CLIENT_SECRET),
-                        scopes=stored.get("scopes", ee.oauth.SCOPES))
-    drive = build("drive", "v3", credentials=creds, cache_discovery=False)
-    SWEEP_DIR.mkdir(parents=True, exist_ok=True)
-    for year in years:
-        name = f"{C.SWEEP_TASK.format(year=year)}.csv"
-        files = drive.files().list(q=f"name = '{name}' and trashed = false", orderBy="modifiedTime desc",
-                                   fields="files(id,size,modifiedTime)").execute().get("files", [])
-        if not files:
-            print(f"missing {name} in Drive (check --status)")
-            continue
-        f = files[0]
-        with open(SWEEP_DIR / name, "wb") as out:
-            dl = MediaIoBaseDownload(out, drive.files().get_media(fileId=f["id"]))
-            done = False
-            while not done:
-                done = dl.next_chunk()[1]
-        print(f"fetched {name}  {int(f['size']) / 1e6:.1f} MB  modified {f['modifiedTime']}"
-              + (f"  ({len(files)} files with this name, took the newest)" if len(files) > 1 else ""))
+    fetch_csvs([f"{C.SWEEP_TASK.format(year=year)}.csv" for year in years], SWEEP_DIR)
     check(years)
 
 
@@ -233,7 +168,7 @@ def main():
     if args.export:
         export(args.years, args.force)
     if args.status:
-        status()
+        print_status(C.SWEEP_TASK.split("{")[0])
     if args.fetch:
         fetch(args.years)
     elif args.check:
