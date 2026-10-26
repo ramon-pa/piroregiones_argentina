@@ -37,8 +37,8 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
   (`docs/notes/02-sweep_cordoba.md`).
 - Paso 01 listo: grilla H3 res 6 (96.461 celdas, `docs/01-hex_grid.md`) subida al asset `h3_res6`;
   `workflow/01-hex_grid.py --check` 2/2 el 2026-10-26.
-- Paso 02 en curso (`docs/02-sweep.md`): 2025 nacional corrido y controlado (3/3), memoria sin
-  problema; su área quemada coincide con la plataforma. Los otros 26 años, lanzados el 2026-10-26.
+- Paso 02 listo (`docs/02-sweep.md`): los 27 años corridos, bajados a `data/sweep/` y controlados
+  (27/27); la suma 1999 a 2025 coincide con el equipo de fuego (`docs/notes/03-sweep_national.md`).
 - Decisiones: `docs/decisions.md` (D1, D4, D6 a D9 acordadas; D2, D3, D5 abiertas).
 - Próximo: `ROADMAP.md`.
 
@@ -71,6 +71,7 @@ Es una vista de este repo; si difieren, manda el repo.
 | `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
 | `docs/notes/01-grid_and_compute.md` | lo medido para elegir la grilla y la estrategia de cómputo |
 | `docs/notes/02-sweep_cordoba.md` | la prueba del barrido único en Córdoba, con sus controles |
+| `docs/notes/03-sweep_national.md` | la corrida nacional de los 27 años, con la serie anual |
 
 ## 4. GEE asset paths
 
@@ -173,6 +174,7 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Grilla H3 res 6 subida al asset `h3_res6` | mismas 96.461 celdas e ids que la local; 0,00 ha sin pintar en el recuadro de Córdoba | `workflow/01-hex_grid.py --check`, 2026-10-26 (2/2) | verificado |
 | Barrido D6 nacional, 2025 (cobertura 2024) | 646.922 filas, las 96.461 celdas; 2,1 min y 25.249 EECU-s; área por celda igual a la H3 (0,997 a 1,006); quemado 1.817.069 ha, 0,17 % sobre clases no quemables o no observadas | `workflow/02-sweep.py --fetch --years 2025`, 2026-10-26 | verificado |
 | Área quemada 2025 según la plataforma MapBiomas Argentina | 1.817.067 ha (2 ha menos que el barrido) | leída por Ramón en la plataforma, 2026-10-26 | dato externo, sin script |
+| Barrido D6 nacional, 27 años | 27/27 pasan `--check`; 571.183 a 815.332 filas por año; quemado 1999 a 2025: 63,235 Mha (equipo de fuego: 63,23, +0,008 %); serie anual en la nota | `workflow/02-sweep.py --fetch` y `--summary`, 2026-10-26; `docs/notes/03-sweep_national.md` | verificado |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.

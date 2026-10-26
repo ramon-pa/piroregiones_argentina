@@ -50,6 +50,7 @@ uv run python workflow/02-sweep.py --export --years 2025
 uv run python workflow/02-sweep.py --status
 uv run python workflow/02-sweep.py --fetch --years 2025   # baja de Drive y corre --check
 uv run python workflow/02-sweep.py --check --years 2025   # solo los controles, sin red
+uv run python workflow/02-sweep.py --summary              # quemado por año y suma contra el equipo de fuego
 ```
 
 ## Decisiones clave
@@ -74,11 +75,12 @@ uv run python workflow/02-sweep.py --check --years 2025   # solo los controles, 
 
 | Archivo | Rol |
 |---|---|
-| `workflow/02-sweep.py` | lanza las tareas (`--export`), las lista (`--status`), baja las tablas (`--fetch`) y las controla (`--check`) |
+| `workflow/02-sweep.py` | lanza las tareas (`--export`), las lista (`--status`), baja las tablas (`--fetch`), las controla (`--check`) y resume lo quemado (`--summary`) |
 | `utils/constants.py` | insumos, multiplicadores del código, `GRID_BBOX`, `SWEEP_TASK`, `SWEEP_DIR` |
 
 ## Relacionado
 
 - `docs/decisions.md`: D4, D6, D7, D9.
 - `docs/notes/02-sweep_cordoba.md`: la prueba del barrido en Córdoba.
+- `docs/notes/03-sweep_national.md`: la corrida nacional, los controles y la serie anual.
 - `scripts/bench_interactive.py --sweep`: la misma cuenta, interactiva, en el recuadro de Córdoba.

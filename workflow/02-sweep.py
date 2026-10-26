@@ -12,6 +12,8 @@ each cover class (available); the rows with month > 0 give the burned area by cl
   --status  state of every step 02 task in the project.
   --fetch   download each year's CSV from Drive into C.SWEEP_DIR (newest file of that name), with
             the GEE credentials on this machine, then run --check.
+  --summary read-only, no GEE: burned area per year from the downloaded CSVs, and their sum against
+            the fire team's national total (REF_BURNED_MHA).
   --check   read-only, no GEE: decode CSVs downloaded into C.SWEEP_DIR and run the gates of the
             Córdoba test (docs/notes/02-sweep_cordoba.md) plus one more: each cell's total area
             equals its H3 area.
@@ -22,6 +24,7 @@ Doc: docs/02-sweep.md. Run from the repo root:
     uv run python workflow/02-sweep.py --status
     uv run python workflow/02-sweep.py --fetch --years 2025
     uv run python workflow/02-sweep.py --check --years 2025
+    uv run python workflow/02-sweep.py --summary
 """
 import argparse
 import os
@@ -35,6 +38,9 @@ from utils import constants as C  # noqa: E402
 SWEEP_DIR = REPO / C.SWEEP_DIR
 GRID = REPO / C.H3_GRID_DIR / f"h3_res{C.H3_RES}.parquet"
 LIVE = {"READY", "RUNNING", "COMPLETED"}  # states that mean "this year is done or on its way"
+# Burned area 1999-2025 from the fire team's toolkit, given to two decimals (fire repo,
+# statistics/docs/statistics.md, check "National annual burned: toolkit vs the object database").
+REF_BURNED_MHA = 63.23
 CELL_AREA_TOL = 0.01  # per-cell raster total vs H3 area; H3 is spherical, pixelArea() ellipsoidal
 
 
@@ -133,6 +139,23 @@ def fetch(years):
     check(years)
 
 
+def summary():
+    import pandas as pd
+
+    total = 0.0
+    for year in C.FIRE_YEARS:
+        path = SWEEP_DIR / f"{C.SWEEP_TASK.format(year=year)}.csv"
+        if not path.exists():
+            sys.exit(f"{path.relative_to(REPO)} not found: --fetch every year first")
+        df = pd.read_csv(path)
+        burned = df.loc[df["code"] % C.CODE_CLASS // C.CODE_MONTH > 0, "sum"].sum()
+        total += burned
+        print(f"{year}  {burned:>12,.0f} ha")
+    diff = (total / 1e6 - REF_BURNED_MHA) / REF_BURNED_MHA * 100
+    print(f"\n{C.FIRE_YEARS[0]}-{C.FIRE_YEARS[-1]}  {total:,.0f} ha = {total / 1e6:.3f} Mha; "
+          f"fire team {REF_BURNED_MHA} Mha ({diff:+.3f} %)")
+
+
 def check(years):
     import geopandas as gpd
     import pandas as pd
@@ -197,11 +220,12 @@ def main():
     ap.add_argument("--status", action="store_true", help="state of the step 02 tasks")
     ap.add_argument("--fetch", action="store_true", help="download the CSVs from Drive, then --check")
     ap.add_argument("--check", action="store_true", help="gates on the downloaded CSVs")
+    ap.add_argument("--summary", action="store_true", help="burned area per year and in total")
     ap.add_argument("--years", type=int, nargs="+", help="fire years (required for --export and --check)")
     ap.add_argument("--force", action="store_true", help="--export even if the task already exists")
     args = ap.parse_args()
-    if not (args.export or args.status or args.fetch or args.check):
-        ap.error("choose --export, --status, --fetch or --check")
+    if not (args.export or args.status or args.fetch or args.check or args.summary):
+        ap.error("choose --export, --status, --fetch, --check or --summary")
     if (args.export or args.fetch or args.check) and not args.years:
         ap.error("--years is required: run one national year first (ROADMAP.md)")
     if args.years and not set(args.years) <= set(C.FIRE_YEARS):
@@ -214,6 +238,8 @@ def main():
         fetch(args.years)
     elif args.check:
         check(args.years)
+    if args.summary:
+        summary()
 
 
 if __name__ == "__main__":

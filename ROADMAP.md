@@ -10,9 +10,9 @@ Destino: trabajo final de Geo Dojo y taller de MapBiomas (`CLAUDE.md`, "Overview
 Lo que corre en GEE está definido: el barrido D6 (27 tareas, con mes y clase de tamaño), la
 frecuencia desde `frequency_burned_v2` (D8). Salidas según D7: grilla al asset `ANALYSES/pyrorregions`,
 tablas CSV al Drive propio. D6 pasó la prueba de Córdoba (`docs/notes/02-sweep_cordoba.md`). Paso 01
-listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Paso 02: 2025 nacional pasó
-los controles y coincide con la plataforma; los otros 26 años lanzados el 2026-10-26. Al retomar:
-`--status`, luego `--fetch --years <los terminados>`.
+listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Paso 02 listo: 27 tablas en
+`data/sweep/`, 27/27 controles, suma igual a la del equipo de fuego (`docs/notes/03-sweep_national.md`).
+Sigue el paso 04, la frecuencia.
 
 ## Ahora
 
@@ -25,11 +25,8 @@ los controles y coincide con la plataforma; los otros 26 años lanzados el 2026-
 
 ## Siguiente
 
-1. [ ] Paso 02, los otros 26 años: bajar y controlar cada uno (`--fetch`). Control de conjunto:
-   la suma de los 27 años quemados contra los 63,23 Mha del equipo de fuego (`statistics.md`).
-2. [ ] Borrar de Drive el CSV viejo de 2025 (`--fetch` toma el más nuevo; el viejo confunde).
-3. [ ] Paso 04, frecuencia por celda (D8): una tarea, CSV a `DRIVE_FOLDER`, con el control contra D6.
-4. [ ] Pasos 05 a 07, luego 09, 10 y la presentación.
+1. [ ] Paso 04, frecuencia por celda (D8): una tarea, CSV a `DRIVE_FOLDER`, con el control contra D6.
+2. [ ] Pasos 05 a 07, luego 09, 10 y la presentación.
 
 ## Hecho (borrar en la próxima pasada)
 
@@ -39,4 +36,4 @@ los controles y coincide con la plataforma; los otros 26 años lanzados el 2026-
 - [x] Carpeta de salida creada por Iván y escritura probada; D6 a D9 acordadas (2026-10-19).
 - [x] Barrido D6 probado en Córdoba con hexágonos reales, todo en verde (2026-10-19).
 - [x] Paso 01: grilla H3 res 6 subida a `h3_res6` y `--check` 2/2 (2026-10-26).
-- [x] Paso 02 escrito; 2025 nacional en 2,1 min, 3/3 controles, igual a la plataforma (2026-10-26).
+- [x] Paso 02: 27 años corridos y controlados; 63,235 Mha contra 63,23 del equipo de fuego; CSV viejo de 2025 a la papelera de Drive (2026-10-26).
