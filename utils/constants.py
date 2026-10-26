@@ -78,6 +78,10 @@ GRID_TRANSFORM = [0.000269494585236, 0, -73.58468801489491,
 # --- H3 grid and the packed code of the yearly sweep (decision D6) ------------------------------
 H3_RES = 6  # extraction resolution; res 5 is built locally by summing children (decision D1)
 H3_GRID_DIR = "data/h3_grid"  # local copy (GeoParquet) and the shapefile zip to upload, out of git
+# Rectangle every national reduction runs over (W, S, E, N): the bounds of the H3 res 6 grid
+# (-73.654, -55.102, -53.578, -21.743, from h3_res6.parquet, 2026-10-26) padded outward. Hardcoded
+# because .geometry().bounds() on the 96k-feature asset fails ("too many edges").
+GRID_BBOX = [-73.7, -55.2, -53.5, -21.7]
 
 # code = cell * CODE_CELL + class * CODE_CLASS + month * CODE_MONTH + size_class
 # month 0..12 and size 0..8 (0 = not burned) fit below CODE_CLASS (12*10 + 8 = 128 < 130); class
@@ -94,3 +98,5 @@ OUTPUT_ROOT = "projects/mapbiomas-argentina/assets/FIRE/COLLECTION-1/ANALYSES/py
 H3_GRID_ASSET = f"{OUTPUT_ROOT}/h3_res{H3_RES}"  # uploaded by hand from H3_GRID_DIR (step 01)
 # Tables (one CSV per task) go to this folder of the user's own Drive and are analysed locally.
 DRIVE_FOLDER = "piro_gee"
+SWEEP_TASK = TASK_PREFIX + "_sweep_{year}"  # task description and CSV name of step 02, per year
+SWEEP_DIR = "data/sweep"  # where the step 02 CSVs are downloaded from Drive, out of git

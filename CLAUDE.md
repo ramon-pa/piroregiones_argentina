@@ -34,9 +34,11 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
 - Qué corre en GEE, definido: barrido D6 por año (con mes y tamaño), frecuencia desde el producto
   publicado (D8), salidas según D7. Nada exportado todavía.
 - Barrido D6 probado en Córdoba con hexágonos reales: todos los controles en verde
-  (`docs/notes/02-sweep_cordoba.md`). Abierto: la memoria con ~1 millón de grupos por año.
+  (`docs/notes/02-sweep_cordoba.md`).
 - Paso 01 listo: grilla H3 res 6 (96.461 celdas, `docs/01-hex_grid.md`) subida al asset `h3_res6`;
   `workflow/01-hex_grid.py --check` 2/2 el 2026-10-26.
+- Paso 02 en curso (`docs/02-sweep.md`): 2025 nacional corrido y controlado (3/3), memoria sin
+  problema; su área quemada coincide con la plataforma. Los otros 26 años, lanzados el 2026-10-26.
 - Decisiones: `docs/decisions.md` (D1, D4, D6 a D9 acordadas; D2, D3, D5 abiertas).
 - Próximo: `ROADMAP.md`.
 
@@ -56,12 +58,14 @@ Es una vista de este repo; si difieren, manda el repo.
 | `utils/constants.py` | **única fuente de verdad**: assets, años, grilla, prefijo de tareas |
 | `utils/aoi.py` | el polígono de la Argentina continental, compartido por el paso 01 y el conteo de celdas |
 | `workflow/01-hex_grid.py` | paso 01: arma la grilla H3 y el zip para subir (`--build`); controla el asset (`--check`) |
+| `workflow/02-sweep.py` | paso 02: barrido D6, una tarea por año (`--export`), estado (`--status`), descarga de Drive (`--fetch`) y controles (`--check`) |
 | `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
 | `scripts/h3_cells_argentina.py` | cuántas celdas H3 cubren el país y cuánto varía su área |
 | `scripts/bench_interactive.py` | pruebas interactivas de costo y precisión de los resúmenes por celda, y del barrido D6 (`--sweep`) |
 | `docs/00-overview.md` | el método en una página y la lista de pasos |
 | `docs/TEMPLATE.md` | forma de los docs de paso (adaptada del repo de fuego) |
 | `docs/01-hex_grid.md` | doc del paso 01 |
+| `docs/02-sweep.md` | doc del paso 02 |
 | `docs/decisions.md` | decisiones de diseño, con estado y fundamento |
 | `docs/references.md` | notas por paper, con qué se leyó de cada uno; herramientas verificadas |
 | `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
@@ -167,6 +171,8 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Barrido D6 en Córdoba (401 hexágonos H3 res 6, 1999, 2010, 2025) | igual a los dos resúmenes separados (diferencia 0,0000 ha); 2.525 a 3.522 filas y 3 a 6 s por año; 0,6 a 0,95 % de lo quemado sobre clases no quemables | `scripts/bench_interactive.py --sweep`, 2026-10-19; `docs/notes/02-sweep_cordoba.md` | verificado |
 | Grilla H3 res 6 armada | 96.461 celdas, ids 0..96.460, sin pentágonos ni repetidas; 14.137 padres de res 5; 2.845.253 km² sumando celdas enteras (las del borde salen del país) | `workflow/01-hex_grid.py --build`, 2026-10-19 | verificado |
 | Grilla H3 res 6 subida al asset `h3_res6` | mismas 96.461 celdas e ids que la local; 0,00 ha sin pintar en el recuadro de Córdoba | `workflow/01-hex_grid.py --check`, 2026-10-26 (2/2) | verificado |
+| Barrido D6 nacional, 2025 (cobertura 2024) | 646.922 filas, las 96.461 celdas; 2,1 min y 25.249 EECU-s; área por celda igual a la H3 (0,997 a 1,006); quemado 1.817.069 ha, 0,17 % sobre clases no quemables o no observadas | `workflow/02-sweep.py --fetch --years 2025`, 2026-10-26 | verificado |
+| Área quemada 2025 según la plataforma MapBiomas Argentina | 1.817.067 ha (2 ha menos que el barrido) | leída por Ramón en la plataforma, 2026-10-26 | dato externo, sin script |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
@@ -179,6 +185,9 @@ Antes de que cualquiera de estos números vaya a un mail o a la presentación: s
 - **Lo no quemado está enmascarado, no en 0** (mes de quema, clase de tamaño, frecuencia). Hacer
   `unmask(0)` antes de cualquier suma o código; si no, el área disponible sale solo de lo quemado.
   La cobertura enmascarada pasa a clase 0 (no observada). Ver D6 y D8.
+- **`unmask(0)` solo rellena dentro de la huella del asset.** Fuera de ella el píxel sigue
+  enmascarado y se cae de la suma. La primera corrida de 2025 perdió área en 17 celdas de borde.
+  Usar `unmask(0, False)`. Ver `docs/02-sweep.md`, "Trampas".
 - **Omisión probablemente alta en fuego col-1.** La validación en curso del equipo de fuego
   (`collection-01/validation/docs/design.md`, estado al 2026-10-06, ola 1 interpretada al 85 %)
   da exactitud del usuario de 73 a 79 % y exactitud del productor de 10 a 22 % en los tres años

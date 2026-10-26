@@ -10,7 +10,9 @@ Destino: trabajo final de Geo Dojo y taller de MapBiomas (`CLAUDE.md`, "Overview
 Lo que corre en GEE está definido: el barrido D6 (27 tareas, con mes y clase de tamaño), la
 frecuencia desde `frequency_burned_v2` (D8). Salidas según D7: grilla al asset `ANALYSES/pyrorregions`,
 tablas CSV al Drive propio. D6 pasó la prueba de Córdoba (`docs/notes/02-sweep_cordoba.md`). Paso 01
-listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Sigue el paso 02.
+listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Paso 02: 2025 nacional pasó
+los controles y coincide con la plataforma; los otros 26 años lanzados el 2026-10-26. Al retomar:
+`--status`, luego `--fetch --years <los terminados>`.
 
 ## Ahora
 
@@ -23,13 +25,9 @@ listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Sigue el pa
 
 ## Siguiente
 
-1. [ ] Paso 02, el barrido D6: `workflow/02-sweep.py` + `docs/02-sweep.md`, una tarea batch por año,
-   CSV a `DRIVE_FOLDER`, se puede volver a correr sin duplicar, descripciones con prefijo `piro`.
-   Modelo: `statistics/*_export.py` del repo de fuego. Los controles de `--sweep` corren sobre cada
-   tabla bajada.
-2. [ ] **Un solo año nacional primero**, para medir memoria, filas y tiempo reales (riesgo de ~1
-   millón de grupos, `docs/notes/02-sweep_cordoba.md`). Si falla, partir por regiones o usar
-   `reduceRegions`. Recién después, los otros 26.
+1. [ ] Paso 02, los otros 26 años: bajar y controlar cada uno (`--fetch`). Control de conjunto:
+   la suma de los 27 años quemados contra los 63,23 Mha del equipo de fuego (`statistics.md`).
+2. [ ] Borrar de Drive el CSV viejo de 2025 (`--fetch` toma el más nuevo; el viejo confunde).
 3. [ ] Paso 04, frecuencia por celda (D8): una tarea, CSV a `DRIVE_FOLDER`, con el control contra D6.
 4. [ ] Pasos 05 a 07, luego 09, 10 y la presentación.
 
@@ -41,3 +39,4 @@ listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Sigue el pa
 - [x] Carpeta de salida creada por Iván y escritura probada; D6 a D9 acordadas (2026-10-19).
 - [x] Barrido D6 probado en Córdoba con hexágonos reales, todo en verde (2026-10-19).
 - [x] Paso 01: grilla H3 res 6 subida a `h3_res6` y `--check` 2/2 (2026-10-26).
+- [x] Paso 02 escrito; 2025 nacional en 2,1 min, 3/3 controles, igual a la plataforma (2026-10-26).
