@@ -15,12 +15,13 @@ memoria con ~1 millón de grupos)? ¿Los números coinciden con fuentes independ
   peor, al oeste de Santa Cruz, con 2 %). Causa: `unmask(0)` rellena solo dentro de la huella del
   asset. Probado celda por celda con la cobertura 2024 (celda 85914: 0,65 km² con el `unmask` por
   defecto, 33,80 con `unmask(0, False)`, hexágono 33,68). Corregido con `unmask(0, False)` y vuelto a
-  correr: 3/3. Lo quemado no cambió (1.817.069 ha); el total subió 23.000 ha, todo clase 0.
+  correr: 3/3. Lo quemado no cambió (1.817.069 ha); el total subió 23.000 ha (sin desglosar por clase: donde falta la huella de la cobertura entra como
+  clase 0, donde falta solo la del fuego conserva su clase).
 - **Contra la plataforma MapBiomas Argentina** (leído por Ramón): 1.817.067 ha. Diferencia 2 ha.
 
 ## Los 27 años
 
-Los 26 restantes, lanzados juntos; GEE los corrió de a tres. Terminaron todos sin error.
+Los 26 restantes, lanzados juntos; al lanzarlos, GEE corría tres a la vez. Terminaron todos sin error.
 
 - `--check`: 27/27 años pasan los tres controles. Todas las celdas en todos los años; área por celda
   entre 0,997 y 1,006 de la H3; área total 284,507 Mha, igual todos los años.
