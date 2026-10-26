@@ -33,7 +33,11 @@ criterio ecológico después de los pasos 06 y 07. Res 4 y res 7 quedan descarta
   res 5 cada celda se dibuja como la unión de sus hijos, no con el contorno H3 de res 5. Los 96.461
   hexágonos de res 6 tienen 14.137 padres (`workflow/01-hex_grid.py`; `docs/01-hex_grid.md`, "Trampas").
 
-## D2 · Período · abierta
+## D2 · Período · acordada (2026-10-26)
+
+**Acordado** (Ramón, 2026-10-26): 1999 a 2025 completo. El control de estabilidad entre dos
+mitades del período queda como agregado opcional para el paso 09, si el tiempo lo permite.
+
 
 **Propuesta.** 1999 a 2025, la ventana completa de fuego col-1.
 
@@ -75,6 +79,10 @@ Riesgo: la validación preliminar del producto sugiere omisión alta (`CLAUDE.md
 fixes"). La tasa de quema estaría subestimada, quizás de forma desigual entre regiones.
 
 ## D5 · Dos niveles: regiones y tipos · abierta
+
+**Estado al 2026-10-26** (Ramón): sigue abierta. En el paso 07 se prueban dos criterios de tamaño, el
+doble de la cicatriz más grande (Erni et al. 2020) y una cantidad fija de regiones del orden de las
+ecorregiones, y se elige con los resultados a la vista. Preguntarle también a Iván.
 
 **Propuesta**, siguiendo a Erni et al. 2020:
 
@@ -196,3 +204,33 @@ no nula: el producto no admite **semillas** sobre clases no quemables del año p
 el equipo de fuego en FY2000, 2014 y 2023, comentario de `CLASSIFICATION_COLLECTIONS` en
 `utils/constants.py` de su repo), pero la cicatriz que crece desde una semilla sí puede cubrirlas.
 Ese área queda fuera de las tasas y se reporta, no se descarta en silencio.
+
+## D10 · La agricultura fuera de las tasas por cobertura · acordada (2026-10-26)
+
+**Acordado** (Ramón, 2026-10-26): las clases agrícolas no entran como variables de tasa de quema por
+cobertura (D4). Su área sigue en el denominador quemable (D9), porque las listas son las del equipo
+de fuego. Consecuencia que se declara al presentar: la fracción quemada por celda baja en las zonas
+agrícolas.
+
+Por qué: el producto descarta todo objeto con más de 40 % de agricultura, en todo el país y en
+cualquier estación (regla B, `docs/07-vector_to_raster.md`, "Object exclusion ruleset", repo de
+fuego). La tasa agrícola es baja por construcción, no por el fuego.
+
+**Qué clases: solo la 19** (Ramón, 2026-10-26). Es la única que la regla B descarta en todas las
+regiones donde aparece, y es casi toda el área agrícola. 9 y 21 quedan como tasas, porque la regla
+las toca solo en una región. Pendiente preguntarle a Iván si el remapeo es sobre la col-3.
+
+La regla B cuenta como agricultura las clases `agriculture_*` de su
+remapeo (`config/veg_fire_remap.csv` del repo de fuego), y ese remapeo depende de la región:
+
+| Clase col-3 | En la regla B | Área media 1998 a 2024 | Tasa de quema media anual |
+|---|---|---|---|
+| 19 Cultivos temporarios | sí, en Cuyo, Pampa y Chaco | 38,18 Mha | 0,20 % |
+| 9 Silvicultura | solo en Cuyo | 0,96 Mha | 0,65 % |
+| 21 Mosaico de usos | solo en Patagonia | 2,03 Mha | 0,34 % |
+| 36 Cultivos perennes | no (la regla excluye los perennes a propósito) | 1,24 Mha | 0,74 % |
+| 15 Pastura | no | 6,78 Mha | 1,65 % |
+
+Áreas y tasas: `workflow/05-cell_table.py --classes`, 2026-10-26. [no verificado] si ese remapeo se armó sobre la col-3 o sobre una colección anterior:
+el repo de fuego dice que `veg_fire` queda congelado en la colección con la que se entrenó.
+

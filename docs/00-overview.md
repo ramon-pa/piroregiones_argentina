@@ -34,7 +34,7 @@ ecorregiones de Burkart et al. 1999, y dónde los límites coinciden o se separa
 | 02 | área disponible y quemada por celda × año × cobertura × mes × tamaño, en un solo barrido por año (D6; incluye el antiguo 03) | [`02-sweep.md`](02-sweep.md) |
 | 03 | (dentro del 02) | |
 | 04 | frecuencia de quema por celda, desde `frequency_burned_v2` (D8) | [`04-frequency.md`](04-frequency.md) |
-| 05 | tabla única por celda, con controles | pendiente |
+| 05 | tablas por celda decodificadas, con controles cruzados | [`05-cell_table.md`](05-cell_table.md) |
 | 06 | variables del régimen | pendiente |
 | 07 | pirorregiones | pendiente |
 | 08 | tipos de régimen (opcional) | pendiente |

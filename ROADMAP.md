@@ -13,21 +13,23 @@ tablas CSV al Drive propio. D6 pasó la prueba de Córdoba (`docs/notes/02-sweep
 listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Paso 02 listo: 27 tablas en
 `data/sweep/`, 27/27 controles, suma igual a la del equipo de fuego (`docs/notes/03-sweep_national.md`).
 Paso 04 listo: frecuencia por celda, 2/2
-controles, igual al paso 02 (`docs/notes/04-frequency.md`). Todo lo de GEE está hecho; sigue el
-paso 05, local.
+controles, igual al paso 02 (`docs/notes/04-frequency.md`). Todo lo de GEE está hecho. Paso 05 listo:
+tablas en `data/tables/`, 5/5 controles. Sigue el paso 06 (variables).
 
 ## Ahora
 
 - [ ] Preguntarle a Iván, cuando surja (sin apuro, no bloquea nada):
   - quiénes trabajan en pirorregiones en la red MapBiomas;
   - si la omisión alta de la validación preliminar se confirma y si varía por región.
+  - si `config/veg_fire_remap.csv` (regla B) se armó sobre la col-3 (D10).
 - [ ] Averiguar fecha de entrega, formato y criterios del trabajo final de Geo Dojo.
 - [ ] Cerrar D2 (período), D3 y D5 (`docs/decisions.md`). D2 y D5 no bloquean GEE: se exportan los
   27 años y el método de regionalización trabaja sobre las tablas.
 
 ## Siguiente
 
-1. [ ] Pasos 05 a 07, luego 09, 10 y la presentación.
+1. [ ] Paso 06, variables del régimen, sobre `data/tables/`.
+2. [ ] Pasos 07 (probar los dos criterios de tamaño de D5), luego 09, 10 y la presentación.
 
 ## Hecho (borrar en la próxima pasada)
 
@@ -39,3 +41,4 @@ paso 05, local.
 - [x] Paso 01: grilla H3 res 6 subida a `h3_res6` y `--check` 2/2 (2026-10-26).
 - [x] Paso 02: 27 años corridos y controlados; 63,235 Mha contra 63,23 del equipo de fuego; CSV viejo de 2025 a la papelera de Drive (2026-10-26).
 - [x] Paso 04: frecuencia por celda, 2/2 controles; `--status` y `--fetch` pasaron a `utils/gee_tasks.py` (2026-10-26).
+- [x] D2 acordada (1999 a 2025), D10 acordada (solo la clase 19 fuera de las tasas), D5 con plan para el 07; paso 05 listo, 5/5 (2026-10-26).

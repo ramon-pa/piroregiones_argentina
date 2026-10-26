@@ -59,6 +59,10 @@ LULC_BAND = "classification_{year}"
 BURNABLE_CLASSES = [1, 3, 4, 6, 9, 14, 15, 18, 19, 21, 36, 10, 11, 12, 63, 66, 73, 77]
 NON_BURNABLE_CLASSES = [22, 24, 25, 26, 33, 34]
 NOT_OBSERVED_CLASSES = [0, 27]  # masked LULC pixels are unmasked to 0 so their area stays visible
+# Classes with no burn-rate variable of their own (decision D10): the product drops every object
+# over 40 % agriculture (fire repo, 07-vector_to_raster.md, "Object exclusion ruleset"), so their
+# rate is low by construction. They stay in the burnable denominator (D9).
+RATE_EXCLUDED_CLASSES = [19]
 
 # --- Ecoregions, Burkart et al. 1999 (APN) -----------------------------------------------------
 _ANC_VEC = "projects/mapbiomas-argentina/assets/ANCILLARY_DATA/VECTOR/ARG"
@@ -107,3 +111,4 @@ SWEEP_DIR = "data/sweep"  # where the step 02 CSVs are downloaded from Drive, ou
 FREQ_CODE_CELL = 100
 FREQ_TASK = TASK_PREFIX + "_freq_1999_2025"  # task description and CSV name of step 04
 FREQ_DIR = "data/frequency"  # where the step 04 CSV is downloaded from Drive, out of git
+TABLES_DIR = "data/tables"  # step 05: the decoded Parquet tables every local step reads, out of git

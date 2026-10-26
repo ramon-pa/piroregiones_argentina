@@ -41,7 +41,9 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
   (27/27); la suma 1999 a 2025 coincide con el equipo de fuego (`docs/notes/03-sweep_national.md`).
 - Paso 04 listo (`docs/04-frequency.md`): frecuencia por celda bajada a `data/frequency/`, 2/2
   controles; coincide con el paso 02 (`docs/notes/04-frequency.md`).
-- Decisiones: `docs/decisions.md` (D1, D4, D6 a D9 acordadas; D2, D3, D5 abiertas).
+- Paso 05 listo (`docs/05-cell_table.md`): tablas decodificadas en `data/tables/`, 5/5 controles.
+  Desde acá todo es local.
+- Decisiones: `docs/decisions.md` (D1, D2, D4, D6 a D10 acordadas; D3 y D5 abiertas).
 - Próximo: `ROADMAP.md`.
 
 Página de seguimiento: https://claude.ai/artifact/Eqz68NSP4Y8vRDLTqRL5m5 (compartida por link).
@@ -61,6 +63,7 @@ Es una vista de este repo; si difieren, manda el repo.
 | `utils/aoi.py` | el polígono de la Argentina continental, compartido por el paso 01 y el conteo de celdas |
 | `workflow/01-hex_grid.py` | paso 01: arma la grilla H3 y el zip para subir (`--build`); controla el asset (`--check`) |
 | `workflow/04-frequency.py` | paso 04: frecuencia por celda desde el producto publicado; mismos modos que el 02 salvo `--summary` |
+| `workflow/05-cell_table.py` | paso 05: decodifica las tablas de GEE a Parquet, controles cruzados, tabla por clase (`--classes`) |
 | `utils/gee_tasks.py` | lanzador de reducciones agrupadas a Drive, estado de tareas y descarga, compartidos por los pasos 02 y 04 |
 | `workflow/02-sweep.py` | paso 02: barrido D6, una tarea por año (`--export`), estado (`--status`), descarga de Drive (`--fetch`) y controles (`--check`) |
 | `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
@@ -71,6 +74,7 @@ Es una vista de este repo; si difieren, manda el repo.
 | `docs/01-hex_grid.md` | doc del paso 01 |
 | `docs/02-sweep.md` | doc del paso 02 |
 | `docs/04-frequency.md` | doc del paso 04 |
+| `docs/05-cell_table.md` | doc del paso 05 |
 | `docs/decisions.md` | decisiones de diseño, con estado y fundamento |
 | `docs/references.md` | notas por paper, con qué se leyó de cada uno; herramientas verificadas |
 | `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
@@ -182,6 +186,8 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Área quemada 2025 según la plataforma MapBiomas Argentina | 1.817.067 ha (2 ha menos que el barrido) | leída por Ramón en la plataforma, 2026-10-26 | dato externo, sin script |
 | Barrido D6 nacional, 27 años | 27/27 pasan `--check`; 571.183 a 815.332 filas por año; quemado 1999 a 2025: 63,235 Mha (equipo de fuego: 63,23, +0,008 %); serie anual en la nota | `workflow/02-sweep.py --fetch` y `--summary`, 2026-10-26; `docs/notes/03-sweep_national.md` | verificado |
 | Frecuencia por celda (paso 04) | 2/2 controles; años quemados × área = 63,235 Mha, igual al paso 02 (−0,001 %); 38,554 Mha quemadas al menos una vez; máximo 18 años de 27; por celda p1 a p99 de −7,3 a +6,9 %, ninguna celda con ≥ 100 ha desviada más de 5 % | `workflow/04-frequency.py --check`, 2026-10-26; `docs/notes/04-frequency.md` | verificado |
+| Tablas decodificadas (paso 05) | 18.090.702 filas del barrido (193 MB en Parquet), 172.925 de frecuencia; 5/5 controles; área de cada celda igual en los 27 años (dispersión máxima 5,2e-10); decodificación exacta | `workflow/05-cell_table.py --build`, 2026-10-26 | verificado |
+| Tasa de quema media anual por clase, nacional 1999 a 2025 | p. ej. 19 Cultivos temporarios 0,20 %, 15 Pastura 1,65 %, 11 Herbáceas inundables 3,47 %, 6 4,06 % (tabla completa con `--classes`) | `workflow/05-cell_table.py --classes`, 2026-10-26 | verificado |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
