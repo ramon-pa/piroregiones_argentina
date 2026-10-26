@@ -24,7 +24,7 @@ a 30 m (sección 4).
 Motivación: el antecedente más cercano en Argentina (Naval-Fernández et al. 2025) cubre solo el
 Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/references.md`.
 
-## 2. Current state (2026-10-19)
+## 2. Current state (2026-10-26)
 
 - Esqueleto del repo creado, siguiendo la organización del repo de fuego de Iván. Repo git local
   con remoto `git@github.com:ramon-pa/piroregiones_argentina.git` (privado).
@@ -35,8 +35,8 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
   publicado (D8), salidas según D7. Nada exportado todavía.
 - Barrido D6 probado en Córdoba con hexágonos reales: todos los controles en verde
   (`docs/notes/02-sweep_cordoba.md`). Abierto: la memoria con ~1 millón de grupos por año.
-- Paso 01: grilla H3 res 6 armada (96.461 celdas, `docs/01-hex_grid.md`); el zip se está subiendo al
-  asset `h3_res6` (2026-10-19). Falta `workflow/01-hex_grid.py --check`.
+- Paso 01 listo: grilla H3 res 6 (96.461 celdas, `docs/01-hex_grid.md`) subida al asset `h3_res6`;
+  `workflow/01-hex_grid.py --check` 2/2 el 2026-10-26.
 - Decisiones: `docs/decisions.md` (D1, D4, D6 a D9 acordadas; D2, D3, D5 abiertas).
 - Próximo: `ROADMAP.md`.
 
@@ -165,7 +165,8 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Celdas H3 que tocan la Argentina continental (13 ecorregiones menos Islas del Atlántico Sur, simplificado a 500 m, 2.795.123 km²) | res 4: 2.125 · res 5: 14.124 · res 6: 96.461 · res 7: 668.344 (únicas; corregido el 2026-10-19, antes contaba duplicadas). Res 5 y 6: p5 a p95 de área 1,38 veces, extremos 1,59, sin pentágonos | `scripts/h3_cells_argentina.py`, 2026-10-19 | verificado |
 | Mes de quema y clase de tamaño: enmascarados donde no hay quema, y coinciden píxel a píxel | 0 píxeles con uno y sin el otro (recuadro −64,6/−64,2, −31,4/−31,0; 2003, 2013, 2020) | comando ad hoc, 2026-10-19 | verificado; **sin script en el repo**: se repite en la prueba de Córdoba |
 | Barrido D6 en Córdoba (401 hexágonos H3 res 6, 1999, 2010, 2025) | igual a los dos resúmenes separados (diferencia 0,0000 ha); 2.525 a 3.522 filas y 3 a 6 s por año; 0,6 a 0,95 % de lo quemado sobre clases no quemables | `scripts/bench_interactive.py --sweep`, 2026-10-19; `docs/notes/02-sweep_cordoba.md` | verificado |
-| Grilla H3 res 6 armada | 96.461 celdas, ids 0..96.460, sin pentágonos ni repetidas; 14.137 padres de res 5; 2.845.253 km² sumando celdas enteras (las del borde salen del país) | `workflow/01-hex_grid.py --build`, 2026-10-19 | verificado; falta subirla y `--check` |
+| Grilla H3 res 6 armada | 96.461 celdas, ids 0..96.460, sin pentágonos ni repetidas; 14.137 padres de res 5; 2.845.253 km² sumando celdas enteras (las del borde salen del país) | `workflow/01-hex_grid.py --build`, 2026-10-19 | verificado |
+| Grilla H3 res 6 subida al asset `h3_res6` | mismas 96.461 celdas e ids que la local; 0,00 ha sin pintar en el recuadro de Córdoba | `workflow/01-hex_grid.py --check`, 2026-10-26 (2/2) | verificado |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.

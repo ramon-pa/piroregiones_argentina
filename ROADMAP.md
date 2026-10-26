@@ -5,14 +5,12 @@ El historial de git es el archivo.
 
 Destino: trabajo final de Geo Dojo y taller de MapBiomas (`CLAUDE.md`, "Overview").
 
-## Para retomar (estado al cierre del 2026-10-19)
+## Para retomar (estado al 2026-10-26)
 
 Lo que corre en GEE está definido: el barrido D6 (27 tareas, con mes y clase de tamaño), la
-frecuencia desde `frequency_burned_v2` (D8) y la subida de la grilla H3. Salidas según D7: grilla al
-asset `ANALYSES/pyrorregions` (escritura probada), tablas CSV al Drive propio. D6 pasó la prueba de
-Córdoba (`docs/notes/02-sweep_cordoba.md`). Grilla H3 armada (96.461 celdas) y **subiéndose al asset
-`h3_res6`** desde el 2026-10-19 (tarea de carga de Ramón). Al retomar: ver en Tasks que terminó y
-correr `uv run python workflow/01-hex_grid.py --check`; si da 2/2, el paso 01 está listo y sigue el 02.
+frecuencia desde `frequency_burned_v2` (D8). Salidas según D7: grilla al asset `ANALYSES/pyrorregions`,
+tablas CSV al Drive propio. D6 pasó la prueba de Córdoba (`docs/notes/02-sweep_cordoba.md`). Paso 01
+listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Sigue el paso 02.
 
 ## Ahora
 
@@ -25,18 +23,15 @@ correr `uv run python workflow/01-hex_grid.py --check`; si da 2/2, el paso 01 es
 
 ## Siguiente
 
-1. [ ] Paso 01, grilla H3 en res 6 (`docs/01-hex_grid.md`). Armada (`--build`) y zip subido por la UI
-   a `H3_GRID_ASSET` el 2026-10-19 (carga en curso). Falta: `--check` y registrar su resultado en
-   `CLAUDE.md` (fila "Grilla H3 res 6 armada").
-2. [ ] Paso 02, el barrido D6: `workflow/02-sweep.py` + `docs/02-sweep.md`, una tarea batch por año,
+1. [ ] Paso 02, el barrido D6: `workflow/02-sweep.py` + `docs/02-sweep.md`, una tarea batch por año,
    CSV a `DRIVE_FOLDER`, se puede volver a correr sin duplicar, descripciones con prefijo `piro`.
    Modelo: `statistics/*_export.py` del repo de fuego. Los controles de `--sweep` corren sobre cada
    tabla bajada.
-3. [ ] **Un solo año nacional primero**, para medir memoria, filas y tiempo reales (riesgo de ~1
+2. [ ] **Un solo año nacional primero**, para medir memoria, filas y tiempo reales (riesgo de ~1
    millón de grupos, `docs/notes/02-sweep_cordoba.md`). Si falla, partir por regiones o usar
    `reduceRegions`. Recién después, los otros 26.
-4. [ ] Paso 04, frecuencia por celda (D8): una tarea, CSV a `DRIVE_FOLDER`, con el control contra D6.
-5. [ ] Pasos 05 a 07, luego 09, 10 y la presentación.
+3. [ ] Paso 04, frecuencia por celda (D8): una tarea, CSV a `DRIVE_FOLDER`, con el control contra D6.
+4. [ ] Pasos 05 a 07, luego 09, 10 y la presentación.
 
 ## Hecho (borrar en la próxima pasada)
 
@@ -45,3 +40,4 @@ correr `uv run python workflow/01-hex_grid.py --check`; si da 2/2, el paso 01 es
 - [x] Grilla y cómputo medidos sin exportar; D1 cerrada (2026-10-17).
 - [x] Carpeta de salida creada por Iván y escritura probada; D6 a D9 acordadas (2026-10-19).
 - [x] Barrido D6 probado en Córdoba con hexágonos reales, todo en verde (2026-10-19).
+- [x] Paso 01: grilla H3 res 6 subida a `h3_res6` y `--check` 2/2 (2026-10-26).
