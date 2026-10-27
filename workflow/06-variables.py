@@ -12,12 +12,16 @@ contiguity graph of step 07 has no holes.
   --fetch   download its CSV into C.REGION_DIR.
   --build   (default) compute the variables, then run --check.
   --check   controls on variables.parquet: no gaps, national totals equal step 05's, shares add up.
+  --res 5   the same at res 5, to variables_r5.parquet: the areas of the seven res 6 children are
+            summed into their parent before any variable is computed (decision D1), so the cell id
+            becomes the parent's (0..14,136, in h3_r5 order) and h3 its res 5 index.
 
 Run from the repo root:
 
     uv run python workflow/06-variables.py --export
     uv run python workflow/06-variables.py --fetch
     uv run python workflow/06-variables.py --build
+    uv run python workflow/06-variables.py --build --res 5
 """
 import argparse
 import sys
@@ -51,13 +55,37 @@ def export(force):
     print(f"started {C.REGION_TASK} -> Drive/{C.DRIVE_FOLDER}/{C.REGION_TASK}.csv  (task {task.id})")
 
 
-def cell_region(cells):
+def variables_path(res):
+    return TABLES / ("variables.parquet" if res == C.H3_RES else f"variables_r{res}.parquet")
+
+
+def to_parent(cells, *tables):
+    """Relabel the res 6 `cell` column of each table with its res 5 parent's id. Returns the res 5
+    cells (cell, h3) and the relabelled tables; every later groupby on `cell` then sums children."""
+    import numpy as np
+    import pandas as pd
+
+    parents = np.sort(cells.h3_r5.unique())
+    lookup = np.empty(cells.cell.max() + 1, dtype="int32")
+    lookup[cells.cell.to_numpy()] = np.searchsorted(parents, cells.h3_r5.to_numpy())
+    out = []
+    for t in tables:
+        t = t.copy()
+        t["cell"] = lookup[t.cell.to_numpy()]
+        out.append(t)
+    return pd.DataFrame({"cell": np.arange(len(parents), dtype="int32"), "h3": parents}), out
+
+
+def cell_region(cells, res=C.H3_RES):
     """Majority MapBiomas region (1-5) per cell and its share of the cell. Cells entirely outside
     every region take the majority region of their neighbours (filled ring by ring)."""
     import pandas as pd
 
     df = pd.read_csv(REGION_CSV)
     d = pd.DataFrame({"cell": df["code"] // 10, "region": df["code"] % 10, "ha": df["sum"]})
+    if res != C.H3_RES:
+        _, (d,) = to_parent(pd.read_parquet(TABLES / "cells.parquet"), d)
+        d = d.groupby(["cell", "region"], as_index=False).ha.sum()  # one row per child before this
     inside = d[d.region > 0]
     top = inside.sort_values("ha").groupby("cell").tail(1).set_index("cell")
     share = (top.ha / d.groupby("cell").ha.sum()).rename("region_share")
@@ -91,19 +119,21 @@ def fill_from_neighbours(cells, values, how):
     return vals
 
 
-def build():
+def build(res):
     import numpy as np
     import pandas as pd
 
     cells = pd.read_parquet(TABLES / "cells.parquet")
     sweep = pd.read_parquet(TABLES / "sweep.parquet")
     freq = pd.read_parquet(TABLES / "frequency.parquet")
+    if res != C.H3_RES:
+        cells, (sweep, freq) = to_parent(cells, sweep, freq)
     idx = cells.cell
     burnable = sweep[sweep.cls.isin(C.BURNABLE_CLASSES)]
     burned = burnable[burnable.month > 0]
 
     v = pd.DataFrame(index=idx)
-    reg = cell_region(cells)
+    reg = cell_region(cells, res)
     v["region"], v["region_share"] = reg.region, reg.region_share
 
     # Areas. Burnable = classes of BURNABLE_CLASSES in the year before each fire (D9); only fire on
@@ -179,20 +209,22 @@ def build():
         v[f"fam_{f}"] = np.where(fam_tot > 0, fam[f] / fam_tot.where(fam_tot > 0, 1), 0.0)
 
     v = v.reset_index()
-    v.to_parquet(TABLES / "variables.parquet", index=False)
-    print(f"wrote {(TABLES / 'variables.parquet').relative_to(REPO)}  {len(v):,} cells")
+    v["h3"] = cells.h3.to_numpy()
+    out = variables_path(res)
+    v.to_parquet(out, index=False)
+    print(f"wrote {out.relative_to(REPO)}  {len(v):,} cells")
     unmapped = comp[comp.family.isna()].ha.sum()
     fb = comp[comp.fallback & comp.family.notna()]
     print(f"  info  family by fallback (region-class pair not in the fire team's remap): "
           f"{fb.ha.sum() / N_YEARS / 1e6:.3f} Mha per year, classes {sorted(fb.cls.unique())}; "
           f"with no family at all {unmapped / N_YEARS:,.0f} ha per year")
-    check(burned_total=burned.ha.sum(), burnable_total=burnable.ha.sum() / N_YEARS)
+    check(res, burned_total=burned.ha.sum(), burnable_total=burnable.ha.sum() / N_YEARS)
 
 
-def check(burned_total=None, burnable_total=None):
+def check(res, burned_total=None, burnable_total=None):
     import pandas as pd
 
-    v = pd.read_parquet(TABLES / "variables.parquet")
+    v = pd.read_parquet(variables_path(res))
     if burned_total is None:
         sweep = pd.read_parquet(TABLES / "sweep.parquet", columns=["cls", "month", "ha"])
         b = sweep[sweep.cls.isin(C.BURNABLE_CLASSES)]
@@ -240,6 +272,8 @@ def main():
     ap.add_argument("--build", action="store_true", help="compute the variables, then --check (default)")
     ap.add_argument("--check", action="store_true", help="controls on variables.parquet")
     ap.add_argument("--force", action="store_true", help="--export even if the task already exists")
+    ap.add_argument("--res", type=int, choices=[5, C.H3_RES], default=C.H3_RES,
+                    help="resolution of --build and --check (5 = children summed into parents)")
     args = ap.parse_args()
     if args.export:
         export(args.force)
@@ -248,9 +282,9 @@ def main():
     if args.fetch:
         fetch_csvs([f"{C.REGION_TASK}.csv"], REGION_CSV.parent)
     if args.check:
-        check()
+        check(args.res)
     elif args.build or not (args.export or args.status or args.fetch):
-        build()
+        build(args.res)
 
 
 if __name__ == "__main__":

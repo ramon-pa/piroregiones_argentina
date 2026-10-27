@@ -5,7 +5,7 @@ El historial de git es el archivo.
 
 Destino: trabajo final de Geo Dojo y taller de MapBiomas (`CLAUDE.md`, "Overview").
 
-## Para retomar (estado al 2026-10-26)
+## Para retomar (estado al 2026-10-27)
 
 Lo que corre en GEE está definido: el barrido D6 (27 tareas, con mes y clase de tamaño), la
 frecuencia desde `frequency_burned_v2` (D8). Salidas según D7: grilla al asset `ANALYSES/pyrorregions`,
@@ -15,9 +15,9 @@ listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Paso 02 lis
 Paso 04 listo: frecuencia por celda, 2/2
 controles, igual al paso 02 (`docs/notes/04-frequency.md`). Todo lo de GEE está hecho. Paso 05 listo:
 tablas en `data/tables/`, 5/5 controles. Paso 06 listo: variables
-por celda, 5/5 controles. **Al retomar, decidir la resolución del paso 07**: REDCAP no entra en la
-Mac a res 6 (`docs/notes/07-redcap_scaling.md`). Propuesta: res 5 con REDCAP (opción A); para eso,
-agregar al 06 el cálculo a res 5 sumando áreas por `h3_r5`.
+por celda, 5/5 controles. Paso 07: primer borrador a res 5 con REDCAP (D13), k = 15, 4/4 controles
+(`docs/notes/07-regions_draft.md`). **Al retomar, mirar el borrador**: elegir k con la curva y el
+mapa, y revisar las regiones de fuego raro.
 
 ## Ahora
 
@@ -31,8 +31,11 @@ agregar al 06 el cálculo a res 5 sumando áreas por `h3_r5`.
 
 ## Siguiente
 
-1. [ ] Decidir A, B o C del paso 07 (`docs/notes/07-redcap_scaling.md`).
-2. [ ] Pasos 07 (probar los dos criterios de tamaño de D5), luego 09, 10 y la presentación.
+1. [ ] Nombres y fichas de las 14 regiones; terminar la presentación del taller.
+2. [ ] Revisar las regiones de temporada dispersa (Monte cuyano, Pampa) y las de fuego raro (Andes
+   áridos, Patagonia): ¿el relleno de celdas sin fuego las arma? Cerrar D5.
+3. [ ] Averiguar por qué `ss_ratio` y la cifra de pygeoda no coinciden.
+4. [ ] Paso 09: comparación cuantitativa con las ecorregiones; luego 10.
 
 ## Hecho (borrar en la próxima pasada)
 
@@ -46,3 +49,5 @@ agregar al 06 el cálculo a res 5 sumando áreas por `h3_r5`.
 - [x] Paso 04: frecuencia por celda, 2/2 controles; `--status` y `--fetch` pasaron a `utils/gee_tasks.py` (2026-10-26).
 - [x] D2 acordada (1999 a 2025), D10 acordada (solo la clase 19 fuera de las tasas), D5 con plan para el 07; paso 05 listo, 5/5 (2026-10-26).
 - [x] D11 y D12 acordadas; paso 06 listo, 5/5 (2026-10-26).
+- [x] D13 acordada (res 5 con REDCAP); variables a res 5 y primer borrador del 07, k = 15 (2026-10-27).
+- [x] D14 acordada; mapa de 14 regiones (k = 12 + 2) y celdas casi sin área quemable resueltas (2026-10-27).

@@ -24,7 +24,7 @@ a 30 m (sección 4).
 Motivación: el antecedente más cercano en Argentina (Naval-Fernández et al. 2025) cubre solo el
 Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/references.md`.
 
-## 2. Current state (2026-10-26)
+## 2. Current state (2026-10-27)
 
 - Esqueleto del repo creado, siguiendo la organización del repo de fuego de Iván. Repo git local
   con remoto `git@github.com:ramon-pa/piroregiones_argentina.git` (privado).
@@ -45,9 +45,14 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
   Desde acá todo es local.
 - Paso 06 listo (`docs/06-variables.md`): variables por celda en `data/tables/variables.parquet`,
   5/5 controles (`docs/notes/06-variables.md`).
-- Decisiones: `docs/decisions.md` (D1, D2, D4, D6 a D12 acordadas; D3 y D5 abiertas).
+- Decisiones: `docs/decisions.md` (D1, D2, D4, D6 a D14 acordadas; D3 y D5 abiertas).
   D12 cambia el papel de D4: la tasa por cobertura va a la ficha de cada región, no al clustering.
-- Paso 07 sin empezar: falta decidir la resolución (REDCAP no entra a res 6, ver la nota del 07).
+- Paso 07, borrador (`docs/07-regions.md`): res 5 con REDCAP (D13), tasa en logaritmo, celdas con
+  < 10 % quemable fuera, k = 12 más dos piezas patagónicas forzadas (D14): 14 regiones, 4/4
+  controles, mapa en `outputs/07-regions_r5_k12_forced.png` (`docs/notes/07-regions_draft.md`).
+- Paso 09 empezado: `workflow/09-ecoregions.py` baja ecorregiones y provincias y dice dónde cae
+  cada región. Falta la comparación cuantitativa.
+- Presentación del taller (borrador): https://claude.ai/artifact/HoQ5bdgQzdFd4r8aLEW8AE (privada).
 - Próximo: `ROADMAP.md`.
 
 Página de seguimiento: https://claude.ai/artifact/Eqz68NSP4Y8vRDLTqRL5m5 (compartida por link).
@@ -68,11 +73,14 @@ Es una vista de este repo; si difieren, manda el repo.
 | `workflow/01-hex_grid.py` | paso 01: arma la grilla H3 y el zip para subir (`--build`); controla el asset (`--check`) |
 | `workflow/04-frequency.py` | paso 04: frecuencia por celda desde el producto publicado; mismos modos que el 02 salvo `--summary` |
 | `workflow/05-cell_table.py` | paso 05: decodifica las tablas de GEE a Parquet, controles cruzados, tabla por clase (`--classes`) |
-| `workflow/06-variables.py` | paso 06: región por celda (GEE) y variables del régimen, con controles |
+| `workflow/06-variables.py` | paso 06: región por celda (GEE) y variables del régimen, con controles; `--res 5` para el 07 |
+| `workflow/07-regions.py` | paso 07: pirorregiones con REDCAP a res 5, polígonos, resumen, mapa, curva de k (`--curve`) |
+| `workflow/09-ecoregions.py` | paso 09 (parte): ecorregiones y provincias desde GEE (`--fetch`) y dónde cae cada región (`--overlay`) |
 | `utils/gee_tasks.py` | lanzador de reducciones agrupadas a Drive, estado de tareas y descarga, compartidos por los pasos 02 y 04 |
 | `workflow/02-sweep.py` | paso 02: barrido D6, una tarea por año (`--export`), estado (`--status`), descarga de Drive (`--fetch`) y controles (`--check`) |
 | `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
 | `scripts/h3_cells_argentina.py` | cuántas celdas H3 cubren el país y cuánto varía su área |
+| `scripts/region_review.py` | revisión de regiones: quemado al menos una vez con bordes (`--burned-once`), árbol de particiones (`--splits`) |
 | `scripts/bench_redcap.py` | tiempo de REDCAP según el número de celdas, para elegir la resolución del paso 07 |
 | `scripts/bench_interactive.py` | pruebas interactivas de costo y precisión de los resúmenes por celda, y del barrido D6 (`--sweep`) |
 | `docs/00-overview.md` | el método en una página y la lista de pasos |
@@ -82,6 +90,7 @@ Es una vista de este repo; si difieren, manda el repo.
 | `docs/04-frequency.md` | doc del paso 04 |
 | `docs/05-cell_table.md` | doc del paso 05 |
 | `docs/06-variables.md` | doc del paso 06 |
+| `docs/07-regions.md` | doc del paso 07 |
 | `docs/decisions.md` | decisiones de diseño, con estado y fundamento |
 | `docs/references.md` | notas por paper, con qué se leyó de cada uno; herramientas verificadas |
 | `docs/notes/README.md` | convenciones del cuaderno de laboratorio |
@@ -91,6 +100,7 @@ Es una vista de este repo; si difieren, manda el repo.
 | `docs/notes/04-frequency.md` | la corrida de la frecuencia y su comparación con el paso 02 |
 | `docs/notes/06-variables.md` | la primera corrida de las variables |
 | `docs/notes/07-redcap_scaling.md` | REDCAP a res 6 no entra en la Mac; opciones para el paso 07 |
+| `docs/notes/07-regions_draft.md` | el primer borrador de pirorregiones (k = 15) y la curva de k |
 
 ## 4. GEE asset paths
 
@@ -198,6 +208,10 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Tablas decodificadas (paso 05) | 18.090.702 filas del barrido (193 MB en Parquet), 172.925 de frecuencia; 5/5 controles; área de cada celda igual en los 27 años (dispersión máxima 5,2e-10); decodificación exacta | `workflow/05-cell_table.py --build`, 2026-10-26 | verificado |
 | Tasa de quema media anual por clase, nacional 1999 a 2025 | p. ej. 19 Cultivos temporarios 0,20 %, 15 Pastura 1,65 %, 11 Herbáceas inundables 3,47 %, 6 4,06 % (tabla completa con `--classes`) | `workflow/05-cell_table.py --classes`, 2026-10-26 | verificado |
 | Variables por celda (paso 06) | 5/5 controles; tasa nacional 0,933 % del área quemable por año; 36.909 celdas sin fuego en clases quemables (38 %); mes pico más común: ene en Patagonia, sep en Chaco | `workflow/06-variables.py --build`, 2026-10-26; `docs/notes/06-variables.md` | verificado |
+| Variables a res 5 (paso 06 `--res 5`) | 14.137 celdas, 5/5 controles, mismos totales que res 6 (63,177 Mha quemadas, 250,797 Mha quemables); 3.099 celdas sin fuego (22 %, contra 38 % a res 6) | `workflow/06-variables.py --build --res 5`, 2026-10-27 | verificado |
+| Pirorregiones, k = 12 + 2 piezas patagónicas (D14) | 14 regiones, 4/4 controles; varianza explicada 0,532 (`ss_ratio`; pygeoda mide distinto); oeste de Neuquén 9.698 km² y 0,41 %/año, oeste de Chubut 22.071 km² y 0,34 %/año, resto de Patagonia 0,05 %/año | `workflow/07-regions.py --build --k 12 --force`, 2026-10-27 | verificado; **borrador** |
+| Bosque patagónico (≥ 50 % bosque) por latitud | 0,29 a 0,30 %/año al norte de 43°S; 0,008 a 0,022 %/año al sur de 46°S | cálculo ad hoc sobre `variables_r5.parquet`, 2026-10-27; en `docs/notes/07-regions_draft.md` | verificado; **sin script en el repo** |
+| Borrador de pirorregiones, k = 15 (primera pasada, antes de D14) | 4/4 controles; varianza explicada (between/total) 0,460; región más chica 19.058 km², la más grande 809.383 km²; 15 a 40 s por corrida | `workflow/07-regions.py --build`, 2026-10-27 | verificado; **borrador** |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
@@ -226,6 +240,11 @@ Antes de que cualquiera de estos números vaya a un mail o a la presentación: s
   dentro del AOI agrícola de la Pampa. Fuente: `docs/07-vector_to_raster.md`, "Object exclusion
   ruleset". Consecuencia: la tasa de quema agrícola está subestimada por construcción.
 - **El producto no tiene intensidad (FRP) ni causa de ignición.** Los antecedentes las usan.
+- **Celdas de borde casi sin área quemable forman su propia región.** En el borrador del 07, la
+  región 10 es el Río de la Plata y la costa: 15,5 % de área quemable. Pendiente de tratar
+  (`docs/notes/07-regions_draft.md`).
+- **pygeoda REDCAP con varios hilos se cae** al azar (`std::length_error`). Usar `cpu_threads=1`
+  (`docs/07-regions.md`, "Trampas").
 - Gotchas de GEE generales: no se copian acá, están en `~/Desktop/GIS/geospatial-skills/SKILLS/gee-gotchas.md`.
   Los que más van a pesar: fijar `crsTransform` en todo export; sumar áreas con `pixelArea()` y
   nunca contar píxeles; el límite de ~17k features al exportar una FC a asset.

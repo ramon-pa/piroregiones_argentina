@@ -80,6 +80,16 @@ fixes"). La tasa de quema estaría subestimada, quizás de forma desigual entre 
 
 ## D5 · Dos niveles: regiones y tipos · abierta
 
+**Estado al 2026-10-27, segunda pasada** (Ramón): k = 12, más dos piezas forzadas en Patagonia
+(D14). La curva de k no tiene codo: desde k = 12 cada partición del árbol suma entre 0,7 y 0,4 % de
+la variación total (`data/regions/splits_r5.csv`, `scripts/region_review.py --splits`). El mínimo de
+4.388 km² sigue sin restringir.
+
+**Estado al 2026-10-27**: primer borrador con k = 15 y mínimo de 4.388 km² (Ramón). A k = 15 el
+mínimo no restringe nada: la región más chica tiene 19.058 km², y a k = 16, 17 y 20 REDCAP da la
+misma varianza explicada con mínimo y sin él. Por ahora el tamaño lo fija k
+(`docs/notes/07-regions_draft.md`).
+
 **Estado al 2026-10-26** (Ramón): sigue abierta. En el paso 07 se prueban dos criterios de tamaño, el
 doble de la cicatriz más grande (Erni et al. 2020) y una cantidad fija de regiones del orden de las
 ecorregiones, y se elige con los resultados a la vista. Preguntarle también a Iván.
@@ -273,3 +283,48 @@ clustering: la tasa por cobertura deja de ser variable de celda.
 Elecciones nuestras, sin paper, declaradas en `docs/06-variables.md`: el corte de 500 ha del tamaño,
 el CV de las celdas sin fuego, la posición del mes pico dentro del año centrado y la falta de
 suavizado de la ECDF.
+
+## D13 · El borrador del paso 07 a res 5, con REDCAP · acordada (2026-10-27)
+
+**Acordado** (Ramón, 2026-10-27): opción A de `docs/notes/07-redcap_scaling.md`. Las variables del
+paso 06 se recalculan a res 5 sumando las áreas de los hijos (D1) y REDCAP (orden completo, Ward)
+corre sobre las 14.137 celdas. Primer borrador: k = 15, del orden de las 13 y 16 ecorregiones, con
+mínimo de 4.388 km² (D5).
+
+Por qué no res 6: REDCAP crece con una potencia cercana a 3 del número de celdas; extrapolado,
+unas 4 horas por corrida y más memoria que los 8 GB de la Mac (no corrido). Una máquina en la nube
+lo correría, pero el borrador necesita decenas de corridas y no hay presupuesto de Google Cloud
+(Iván, 2026-10-19). A res 5 una corrida tarda entre 15 y 40 s (`workflow/07-regions.py`,
+2026-10-27). La región mínima son ~18 celdas de res 5, así que res 6 no cambia la escala de las
+regiones.
+
+Si el mapa a res 5 resulta demasiado grueso: res 6 con Ward con contigüidad de scikit-learn
+(opción B), sin tamaño mínimo, o REDCAP en la nube.
+
+## D14 · Rate en logaritmo, celdas sin área quemable afuera, y dos piezas patagónicas forzadas · acordada (2026-10-27)
+
+**Acordado** (Ramón, 2026-10-27), tres cambios al paso 07:
+
+1. **Tasa y recurrencia en logaritmo** antes de estandarizar, como Segura-Garcia et al. 2025
+   ("Methods", (c)(i)) con el área quemada y la frecuencia. La tasa por celda va de 1e-5 a 20 % por
+   año; en escala lineal, la diferencia entre bosque y estepa en Patagonia (0,185 contra 0,050 %)
+   valía 0,002 en las unidades del agrupamiento, y en logaritmo 0,223. El valor sumado antes del
+   logaritmo (`LOG_RATE_OFFSET`, 0,001 %) es nuestro: con 0,01 o 0,0001, el 83 a 85 % del área queda
+   en la misma región (k = 15).
+2. **Celdas con menos de 10 % de área quemable fuera del agrupamiento** (`MIN_BURNABLE_SHARE`): 571
+   celdas, 91.695 km². Después se suman a la región vecina más común. En el primer borrador formaban
+   una región propia en el Río de la Plata (15,5 % quemable). Umbral nuestro.
+3. **k = 12 más dos piezas del nivel k = 20 del mismo árbol** (`FORCED_SPLIT_*`, `--force`): oeste de
+   Neuquén (9.698 km², 0,41 %/año) y oeste de Chubut (22.071 km², 0,34 %/año), dentro de una Patagonia
+   que se quema 0,05 %/año. Las regiones están anidadas, así que cada pieza cae entera en una región.
+
+Por qué las piezas y no la franja de bosque entera: el bosque andino-patagónico no tiene un régimen
+único. Las celdas con ≥ 50 % de bosque se queman 0,29 a 0,30 %/año al norte de 43°S y 0,008 a
+0,022 %/año al sur de 46°S. Al norte de 46°S, más de la mitad del área de bosque (15.834 km²) queda
+fuera de las piezas, con una celda mediana de 0,005 %/año. Cortar por la cobertura juntaría celdas de
+regímenes distintos y pondría un límite de vegetación en un mapa de fuego (principio 4 de Erni et
+al. 2020). Las piezas tienen 24 a 35 % de bosque: son la transición bosque-estepa.
+
+Costo: 0,532 de varianza explicada contra 0,537 del k = 14 sin forzar (medido con `ss_ratio`, que
+no coincide con la cifra de pygeoda; ver la nota del paso).
+

@@ -20,6 +20,7 @@ ya sumadas por celda, así que el paso es local salvo la región.
 | Tablas del paso 05 | barrido largo, frecuencia, celdas | `TABLES_DIR` |
 | Región por celda | área de cada región de MapBiomas en cada celda | `REGION_RASTER` → Drive → `REGION_DIR` |
 | `variables.parquet` | una fila por celda: variables, composición, banderas | `TABLES_DIR` |
+| `variables_r5.parquet` | lo mismo a res 5: áreas de los hijos sumadas antes de calcular (D1) | `TABLES_DIR` |
 
 ## Cómo funciona
 
@@ -49,6 +50,7 @@ Solo entra el fuego sobre clases quemables del año previo (D9). Las variables:
 uv run python workflow/06-variables.py --export   # GEE: región por celda, una tarea
 uv run python workflow/06-variables.py --fetch
 uv run python workflow/06-variables.py --build    # variables y controles
+uv run python workflow/06-variables.py --build --res 5   # lo mismo a res 5, para el paso 07 (D13)
 ```
 
 ## Decisiones clave
@@ -64,6 +66,10 @@ Elecciones nuestras, sin paper:
 - El pico entra al clustering como seno y coseno: el mes es circular.
 
 ## Trampas
+
+- A res 5, la región de MapBiomas se elige después de sumar el área de cada región entre los hijos;
+  elegirla antes daba la de un solo hijo (la primera corrida marcó 14.135 celdas con
+  `region_share < 0.9`).
 
 - Celdas sin fuego son el 38 %: el relleno de la temporada se hace anillo por anillo porque hay
   bloques grandes sin ninguna vecina con fuego.

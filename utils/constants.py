@@ -180,3 +180,36 @@ FREQ_DIR = "data/frequency"  # where the step 04 CSV is downloaded from Drive, o
 REGION_TASK = TASK_PREFIX + "_cell_region"  # step 06: area of each region per cell
 REGION_DIR = "data/region"  # where the step 06 region CSV is downloaded, out of git
 TABLES_DIR = "data/tables"  # step 05: the decoded Parquet tables every local step reads, out of git
+
+# --- Step 07: pyroregions (decisions D5, D13) --------------------------------------------------
+REGIONS_RES = 5  # REDCAP at res 6 does not fit this Mac (docs/notes/07-redcap_scaling.md); D13
+REGIONS_K = 12   # Ramón, 2026-10-27, from the maps of k = 12, 15 and 20 and the tree of splits (D5, D14)
+# Minimum region area: twice the largest fire recorded (Erni et al. 2020, citing O'Neill et al.
+# 1996), with the largest scar of the country, 219,410 ha in 2003 (fire repo constants.py).
+MIN_REGION_KM2 = 2 * 219_410 / 100
+COMPOSITION_WEIGHT = 0.2  # land-cover families vs 1.0 for each fire variable (Boulanger et al. 2014, p. 368; D12)
+REGIONS_DIR = "data/regions"  # step 07 outputs, out of git
+# Burn rate and recurrence enter the clustering as logarithms, as Segura-Garcia et al. 2025 do with
+# burned area and frequency ("Methods", (c)(i)): the rate spans 1e-5 to 20 % per year, and on a
+# linear scale everything under ~1 % looks alike. log10(rate + LOG_RATE_OFFSET) for the rate, whose
+# 0 (cells without fire) has no logarithm; the offset is our choice, not a paper's.
+LOG_RATE_OFFSET = 0.001  # % of burnable area per year
+# Cells with less burnable area than this share of their area (water, salt flats, rock) stay out of
+# the clustering and join their most common neighbouring region afterwards: in the first draft they
+# made a region of their own in the Rio de la Plata. Our threshold, not a paper's (D13).
+MIN_BURNABLE_SHARE = 0.10
+# Decision D14: the k = REGIONS_K map plus pieces of a deeper level of the same REDCAP tree (the
+# regions are nested, so a deeper piece lies inside one region). Each piece is named by a point in
+# it, not by its number, which depends on k. The two Patagonian pieces are where the northern
+# Andean-Patagonian forest and its ecotone burn: 0.34 and 0.41 % per year against 0.05 % for the
+# rest of Patagonia (docs/notes/07-regions_draft.md). `07-regions.py --force`.
+FORCED_SPLIT_K = 20
+FORCED_SPLIT_POINTS = {"oeste de Chubut": (-43.0, -71.4), "oeste de Neuquén": (-40.0, -70.9)}  # lat, lon
+
+# --- Step 09: where each region falls -----------------------------------------------------------
+# Provinces: FAO GAUL 2025, the 500 m simplified version (the 2015 one is deprecated in GEE).
+PROVINCES = "FAO/GAUL_SIMPLIFIED_500m/2025/level1"
+PROVINCE_ISO3 = "ARG"
+PROVINCE_NAME_FIELD = "GAUL1_NAME"
+ANCILLARY_SIMPLIFY_M = 1000  # simplification before download; cells are matched by their centre
+ANCILLARY_DIR = "data/ancillary"  # ecoregions and provinces as GeoParquet, out of git
