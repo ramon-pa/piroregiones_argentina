@@ -198,13 +198,40 @@ LOG_RATE_OFFSET = 0.001  # % of burnable area per year
 # the clustering and join their most common neighbouring region afterwards: in the first draft they
 # made a region of their own in the Rio de la Plata. Our threshold, not a paper's (D13).
 MIN_BURNABLE_SHARE = 0.10
-# Decision D14: the k = REGIONS_K map plus pieces of a deeper level of the same REDCAP tree (the
-# regions are nested, so a deeper piece lies inside one region). Each piece is named by a point in
-# it, not by its number, which depends on k. The two Patagonian pieces are where the northern
-# Andean-Patagonian forest and its ecotone burn: 0.34 and 0.41 % per year against 0.05 % for the
-# rest of Patagonia (docs/notes/07-regions_draft.md). `07-regions.py --force`.
-FORCED_SPLIT_K = 20
-FORCED_SPLIT_POINTS = {"oeste de Chubut": (-43.0, -71.4), "oeste de Neuquén": (-40.0, -70.9)}  # lat, lon
+# Decisions D14 and D15: the k = REGIONS_K map plus pieces of deeper levels of the same REDCAP tree
+# (the regions are nested, so a deeper piece lies inside one region). Each piece is named by a point
+# in it, not by its number, which depends on k, and taken from its own level. The two Patagonian
+# pieces (k = 20) are where the northern Andean-Patagonian forest and its ecotone burn: 0.34 and
+# 0.41 % per year against 0.05 % for the rest of Patagonia (docs/notes/07-regions_draft.md). The
+# lower Paraná delta (k = 25, the first level where it splits off) burns well above the rest of its
+# region (D15). `07-regions.py --force`.
+FORCED_SPLIT_POINTS = {  # name: (lat, lon, k of the level the piece comes from)
+    "oeste de Chubut": (-43.0, -71.4, 20),
+    "oeste de Neuquén": (-40.0, -70.9, 20),
+    "delta del Paraná": (-33.29, -59.73, 25),
+}
+# Names and colours of the regions of the k = 12 + 3 map (D14, D15), each tied to a point inside the
+# region, not to its number. Proposed names (2026-10-27), read from where each region falls (step 09)
+# and its regime (step 07 summary); the more specific ones ("Sierras") are our reading, [no
+# verificado]. Colours by biome family: greens forest, ochres and browns Espinal and Monte, blues wet,
+# pale grass and steppe. The map adds the provinces in brackets. Regions of other maps go unnamed.
+PYROREGION_NAMES = {  # name: (lat, lon, colour)
+    "Chaco occidental y pedemonte": (-26.09, -63.21, "#c4d47a"),
+    "Chaco central": (-26.54, -61.25, "#5a9e3a"),
+    "Selva misionera": (-26.97, -54.53, "#1b6e3a"),
+    "Esteros y campos correntinos": (-28.97, -56.93, "#3fa7b5"),
+    "Andes áridos y Puna": (-28.66, -68.91, "#ddd0b8"),
+    "Espinal": (-32.26, -59.32, "#c7a64a"),
+    "Sierras de Córdoba y San Luis": (-31.95, -65.17, "#8c5a2b"),
+    "Monte cuyano": (-32.20, -68.57, "#d58fb0"),
+    "Delta del Paraná": (-33.09, -60.14, "#2a78d6"),
+    "Pampa agrícola": (-34.01, -62.88, "#f2d06b"),
+    "Pampa bonaerense": (-37.27, -61.24, "#b5d99c"),
+    "Monte y Caldenal": (-37.31, -65.98, "#e0663f"),
+    "Ecotono andino neuquino": (-40.11, -70.31, "#8e7cc3"),
+    "Bosque andino chubutense": (-43.08, -71.39, "#2f8f6f"),
+    "Estepa patagónica": (-42.93, -67.67, "#c9cfd6"),
+}
 
 # --- Step 09: where each region falls -----------------------------------------------------------
 # Provinces: FAO GAUL 2025, the 500 m simplified version (the 2015 one is deprecated in GEE).

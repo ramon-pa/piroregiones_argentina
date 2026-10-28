@@ -15,10 +15,11 @@ listo: grilla H3 en el asset `h3_res6`, `--check` 2/2 el 2026-10-26. Paso 02 lis
 Paso 04 listo: frecuencia por celda, 2/2
 controles, igual al paso 02 (`docs/notes/04-frequency.md`). Todo lo de GEE está hecho. Paso 05 listo:
 tablas en `data/tables/`, 5/5 controles. Paso 06 listo: variables
-por celda, 5/5 controles. Paso 07: borrador a res 5 con REDCAP (D13); mapa elegido k = 12 más dos
-piezas patagónicas forzadas (D14), 14 regiones, 4/4 controles (`docs/notes/07-regions_draft.md`).
-Ese mapa es el único que se muestra en el taller. **Al retomar**: fichas de las 14 regiones (paso 10,
-alcance A: tabla y texto, sin figuras por región).
+por celda, 5/5 controles. Paso 07: borrador a res 5 con REDCAP (D13); mapa elegido k = 12 más tres
+piezas forzadas (D14, D15), 15 regiones con nombres propuestos, 4/4 controles
+(`docs/notes/07-regions_draft.md`). Ese mapa es el único que se muestra en el taller. **Al retomar**:
+lo que salga de la reunión (bosque andino-patagónico norte), después fichas de las 15 regiones
+(paso 10, alcance A: tabla y texto, sin figuras por región).
 
 ## Ahora
 

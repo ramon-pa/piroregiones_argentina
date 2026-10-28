@@ -328,3 +328,24 @@ al. 2020). Las piezas tienen 24 a 35 % de bosque: son la transición bosque-este
 Costo: 0,532 de varianza explicada contra 0,537 del k = 14 sin forzar (medido con `ss_ratio`, que
 no coincide con la cifra de pygeoda; ver la nota del paso).
 
+## D15 · El Delta del Paraná como tercera pieza forzada · acordada (2026-10-27)
+
+**Acordado** (Ramón, 2026-10-27, opción A). Ramón vio a ojo una franja de fuego sobre el Paraná,
+entre Santa Fe, Entre Ríos y Buenos Aires, metida en la región del Espinal. Medido (revisión ad hoc,
+sin script en el repo): las 174 celdas de esa región con el centro en la ecorregión Delta e Islas del
+Paraná se queman 3,08 %/año, el resto de la región 1,10 %. El árbol de REDCAP la separa recién en
+k = 25: una pieza de 84 celdas, 85 % en el Delta, entre 32,2 y 34°S.
+
+1. **La pieza del nivel k = 25** se fuerza como las patagónicas (D14). Cada pieza toma ahora su
+   propio nivel (`FORCED_SPLIT_POINTS` lleva el k). Resultado: 15.401 km², 4,32 %/año, la tasa más
+   alta del mapa; el Espinal queda en 1,14 %/año. Mapa de 15 regiones, `ss_ratio` 0,536.
+2. **Las celdas fuera del agrupamiento** (D14, punto 2) se reasignan sobre el mapa final, con las
+   piezas ya puestas. Sin esto, una celda de agua en la desembocadura del Uruguay quedó separada del
+   Espinal y falló el control de conexión. El cambio movió unas pocas celdas sin área quemable: los
+   conteos de las regiones 1, 5, 6, 11 y 15 cambian en 1 o 2 celdas.
+
+Opción descartada: toda la ecorregión Delta dentro del Espinal como región. Cubre el Paraná al norte
+de Rosario, pero impone un límite de vegetación (principio 4 de Erni et al. 2020). El tramo al
+norte de 32°S sigue en el Espinal hasta k = 30: queda como pregunta abierta, igual que la región
+continua de bosque andino-patagónico norte (slide "A discutir" del taller).
+

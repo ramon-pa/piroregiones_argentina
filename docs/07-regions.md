@@ -43,8 +43,12 @@ resumen, mapa
 - **Agrupamiento.** `pygeoda.redcap`, `fullorder-wardlinkage`, k = `REGIONS_K`, con el área de cada
   celda como variable de tamaño y `MIN_REGION_KM2` como mínimo. Las regiones se numeran por la
   latitud de su centro, de norte a sur.
-- **Piezas forzadas** (`--force`, D14): cada punto de `FORCED_SPLIT_POINTS` toma su región del nivel
-  `FORCED_SPLIT_K` del mismo árbol y pasa a ser una región propia.
+- **Piezas forzadas** (`--force`, D14 y D15): cada punto de `FORCED_SPLIT_POINTS` toma su región del
+  nivel k que lleva (20 las patagónicas, 25 el Delta) y pasa a ser una región propia. Después, las
+  celdas fuera del agrupamiento se reasignan sobre el mapa final.
+- **Nombres y colores** (`PYROREGION_NAMES`): cada nombre propuesto va atado a un punto dentro de su
+  región, no al número. Si todas las regiones del mapa tienen exactamente un nombre, el mapa los usa
+  con sus colores; si no (otro k), quedan sin nombre y con la paleta.
 - **Resumen por región.** La tasa de quema es exacta (área quemada sobre área quemable, sumadas). El
   resto son promedios de las variables de celda ponderados por área (quemable o quemada, según la
   variable): una primera mirada, no la ficha de D12.
@@ -58,7 +62,9 @@ resumen, mapa
 uv run python workflow/06-variables.py --build --res 5   # antes, una vez
 uv run python workflow/07-regions.py --build             # k = REGIONS_K
 uv run python workflow/07-regions.py --build --k 20      # otro k
-uv run python workflow/07-regions.py --build --k 12 --force   # el mapa elegido: k = 12 + 2 (D14)
+uv run python workflow/07-regions.py --build --k 12 --force   # el mapa elegido: k = 12 + 3 (D14, D15)
+uv run python workflow/09-ecoregions.py --overlay --k 12 --forced
+uv run python workflow/07-regions.py --build --k 12 --force   # otra vez: la leyenda lee las provincias del 09
 uv run python workflow/07-regions.py --curve             # k = 2 a 30, un proceso por k, ~10 min
 uv run python scripts/region_review.py --splits 21       # el árbol de particiones
 uv run python scripts/region_review.py --burned-once 12  # quemado al menos una vez con los bordes
@@ -71,8 +77,9 @@ uv run python workflow/09-ecoregions.py --overlay --k 12 --forced   # provincias
 - Islas unidas a la celda más cercana: elección nuestra, sin paper.
 - Vecindad tipo torre: los hexágonos no tienen vecinos solo por un vértice, así que torre y reina
   dan lo mismo.
-- Colores del mapa por coloreo de grafo: dos regiones vecinas nunca comparten color. El número
-  identifica la región, no el color.
+- Un color por región (`PALETTE`, hasta 16), con una tabla de referencia dentro del mapa: color,
+  número, provincias y ecorregiones con al menos `LEGEND_MIN_SHARE` % del área (del archivo `places`
+  del paso 09, si existe) y tasa. Antes era coloreo de grafo, con colores repetidos.
 
 ## Trampas
 

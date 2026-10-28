@@ -48,8 +48,10 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
 - Decisiones: `docs/decisions.md` (D1, D2, D4, D6 a D14 acordadas; D3 y D5 abiertas).
   D12 cambia el papel de D4: la tasa por cobertura va a la ficha de cada región, no al clustering.
 - Paso 07, borrador (`docs/07-regions.md`): res 5 con REDCAP (D13), tasa en logaritmo, celdas con
-  < 10 % quemable fuera, k = 12 más dos piezas patagónicas forzadas (D14): 14 regiones, 4/4
-  controles, mapa en `outputs/07-regions_r5_k12_forced.png` (`docs/notes/07-regions_draft.md`).
+  < 10 % quemable fuera, k = 12 más tres piezas forzadas, dos patagónicas (D14) y el Delta del
+  Paraná (D15): 15 regiones con nombres propuestos, 4/4 controles, mapa en
+  `outputs/07-regions_r5_k12_forced.png` (`docs/notes/07-regions_draft.md`). Abierto: una región
+  continua de bosque andino-patagónico norte (slide "A discutir").
 - Paso 09 empezado: `workflow/09-ecoregions.py` baja ecorregiones y provincias y dice dónde cae
   cada región. Falta la comparación cuantitativa.
 - Presentación del taller (borrador): https://claude.ai/artifact/HoQ5bdgQzdFd4r8aLEW8AE (privada).
@@ -209,7 +211,8 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Tasa de quema media anual por clase, nacional 1999 a 2025 | p. ej. 19 Cultivos temporarios 0,20 %, 15 Pastura 1,65 %, 11 Herbáceas inundables 3,47 %, 6 4,06 % (tabla completa con `--classes`) | `workflow/05-cell_table.py --classes`, 2026-10-26 | verificado |
 | Variables por celda (paso 06) | 5/5 controles; tasa nacional 0,933 % del área quemable por año; 36.909 celdas sin fuego en clases quemables (38 %); mes pico más común: ene en Patagonia, sep en Chaco | `workflow/06-variables.py --build`, 2026-10-26; `docs/notes/06-variables.md` | verificado |
 | Variables a res 5 (paso 06 `--res 5`) | 14.137 celdas, 5/5 controles, mismos totales que res 6 (63,177 Mha quemadas, 250,797 Mha quemables); 3.099 celdas sin fuego (22 %, contra 38 % a res 6) | `workflow/06-variables.py --build --res 5`, 2026-10-27 | verificado |
-| Pirorregiones, k = 12 + 2 piezas patagónicas (D14) | 14 regiones, 4/4 controles; varianza explicada 0,532 (`ss_ratio`; pygeoda mide distinto); oeste de Neuquén 9.698 km² y 0,41 %/año, oeste de Chubut 22.071 km² y 0,34 %/año, resto de Patagonia 0,05 %/año | `workflow/07-regions.py --build --k 12 --force`, 2026-10-27 | verificado; **borrador** |
+| Pirorregiones, k = 12 + 3 piezas (D14, D15) | 15 regiones, 4/4 controles; `ss_ratio` 0,536; Delta del Paraná 15.401 km² y 4,32 %/año (la más alta), Espinal sin el Delta 1,14 %/año | `workflow/07-regions.py --build --k 12 --force`, 2026-10-27 | verificado; **borrador** |
+| Pirorregiones, k = 12 + 2 piezas patagónicas (D14, reemplazado por D15) | 14 regiones, 4/4 controles; varianza explicada 0,532 (`ss_ratio`; pygeoda mide distinto); oeste de Neuquén 9.698 km² y 0,41 %/año, oeste de Chubut 22.071 km² y 0,34 %/año, resto de Patagonia 0,05 %/año | `workflow/07-regions.py --build --k 12 --force`, 2026-10-27 | verificado; **borrador** |
 | Bosque patagónico (≥ 50 % bosque) por latitud | 0,29 a 0,30 %/año al norte de 43°S; 0,008 a 0,022 %/año al sur de 46°S | cálculo ad hoc sobre `variables_r5.parquet`, 2026-10-27; en `docs/notes/07-regions_draft.md` | verificado; **sin script en el repo** |
 | Borrador de pirorregiones, k = 15 (primera pasada, antes de D14) | 4/4 controles; varianza explicada (between/total) 0,460; región más chica 19.058 km², la más grande 809.383 km²; 15 a 40 s por corrida | `workflow/07-regions.py --build`, 2026-10-27 | verificado; **borrador** |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |

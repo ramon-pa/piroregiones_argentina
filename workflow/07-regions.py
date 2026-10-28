@@ -18,8 +18,8 @@ weights survive (pygeoda standardizes by default).
              summary_r5_k<k>.csv               area and regime of each region, to name them
            the map to outputs/07-regions_r5_k<k>.png, then the controls.
   --k N [N ...]     other k for --build, one set of outputs each.
-  --force           add the pieces of C.FORCED_SPLIT_POINTS, taken from the k = C.FORCED_SPLIT_K level of
-                    the same tree (decision D14); adds _forced to the names.
+  --force           add the pieces of C.FORCED_SPLIT_POINTS, each taken from its own deeper k level of
+                    the same tree (decisions D14 and D15); adds _forced to the names.
   --log-offset X    another offset for the log of the rate (sensitivity); adds _off<X> to the names.
   --curve  between-to-total sum of squares for k = 2..30, one process per k, to k_curve_r5.csv,
            and the region of every cell at each k (numbered as in --build) to labels_r5.parquet.
@@ -50,9 +50,14 @@ FAM_VARS = [f"fam_{f}" for f in C.FAMILIES]
 CURVE_K = range(2, 31)
 CURVE_WORKERS = 3
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
-# Categorical palette of the dataviz skill (references/palette.md, light mode). Regions get colours
-# by graph colouring, so neighbours differ; the number on the map, not the colour, names a region.
-PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
+# One colour per region (Ramón, 2026-10-27), so the legend table in the map names each one. Named
+# regions take theirs from C.PYROREGION_NAMES; the others, in order, from the categorical palette
+# of the dataviz skill (references/palette.md, light mode) and ours after it. Up to 16 regions.
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948",
+           "#7fc6e8", "#a0522d", "#b8d36b", "#9e9ac8", "#f2c6a0", "#4f7f8f", "#c9a227", "#d4a5d9"]
+# Legend of the map: provinces holding at least this share of a region, three at most, read from the
+# places file of step 09 when it exists.
+LEGEND_MIN_SHARE = 10
 
 
 def load():
@@ -250,14 +255,18 @@ def ss_ratio(v, offset):
 
 
 def force_splits(v, nb_raw, nb_all, offset):
-    """Give each piece of C.FORCED_SPLIT_POINTS, taken from the k = C.FORCED_SPLIT_K level, a region
-    of its own. Each piece must lie inside one region of the current map."""
+    """Give each piece of C.FORCED_SPLIT_POINTS, taken from its own k level, a region of its own. Each
+    piece must lie inside one region of the current map."""
     import h3
+    import pandas as pd
 
-    labels, _, _, _ = cluster(v, nb_raw, C.FORCED_SPLIT_K, offset)
-    deep = assign_excluded(v, labels, nb_all)
+    deep_at = {}
+    for k in sorted({k for _, _, k in C.FORCED_SPLIT_POINTS.values()}):
+        labels, _, _, _ = cluster(v, nb_raw, k, offset)
+        deep_at[k] = assign_excluded(v, labels, nb_all)
     region = v.region.to_numpy().copy()
-    for name, (lat, lon) in C.FORCED_SPLIT_POINTS.items():
+    for name, (lat, lon, k) in C.FORCED_SPLIT_POINTS.items():
+        deep = deep_at[k]
         at = (v.h3 == h3.latlng_to_cell(lat, lon, C.REGIONS_RES)).to_numpy()
         assert at.sum() == 1, f"{name}: the point is in no res {C.REGIONS_RES} cell of the grid"
         piece = deep == deep[at][0]
@@ -265,7 +274,11 @@ def force_splits(v, nb_raw, nb_all, offset):
         assert len(parents) == 1, f"{name}: the piece spans regions {parents}"
         region[piece] = region.max() + 1
         print(f"  info  forced: {name}, {v.area_km2[piece].sum():,.0f} km² out of region {parents.pop()}")
-    return region
+    # The cells left out of the clustering follow the final map, as in the unforced one: the most
+    # common region of their neighbours. Taken from the deeper level instead, a water cell at the
+    # mouth of the Uruguay was cut off from its region by the delta piece (2026-10-27).
+    kept = v.clustered.to_numpy()
+    return assign_excluded(v, pd.Series(region[kept], index=v.index[kept]), nb_all)
 
 
 def polygons(v, g):
@@ -281,21 +294,50 @@ def polygons(v, g):
     return poly
 
 
-def draw(poly, v, nb, title, path):
-    """The map. Neighbouring regions come from the cell graph, not from the polygons, whose shared
-    edges are not exactly noded."""
-    import matplotlib.pyplot as plt
+def top_places(text):
+    """'Salta 46%; La Rioja 12%; Chaco 11%' -> 'Salta, La Rioja y Chaco': the names above
+    LEGEND_MIN_SHARE, three at most, never the part outside the country."""
+    names = []
+    for item in text.split("; "):
+        name, share = item.rsplit(" ", 1)
+        if name != "(fuera)" and float(share.rstrip("%")) >= LEGEND_MIN_SHARE:
+            names.append(name.replace(" Del ", " del "))  # GAUL writes "Santiago Del Estero"
+    names = names[:3]
+    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} y {names[-1]}"
 
-    region = dict(zip(v.cell, v.region))
-    adj = {r: set() for r in poly.region}
-    for c, ns in nb.items():
-        adj[region[c]].update(region[n] for n in ns if region[n] != region[c])
-    colour = {}
-    for r in sorted(adj, key=lambda r: -len(adj[r])):  # greedy colouring, most neighbours first
-        used = {colour.get(n) for n in adj[r]}
-        colour[r] = next(c for c in PALETTE if c not in used)
-    fig, ax = plt.subplots(figsize=(6, 11))
-    poly.plot(ax=ax, color=[colour[r] for r in poly.region], edgecolor="white", linewidth=0.8, alpha=0.85)
+
+def region_names(poly):
+    """Name and colour of each region from C.PYROREGION_NAMES, by the polygon holding each point. Only
+    when every region gets exactly one name; otherwise none (another map)."""
+    from shapely.geometry import Point
+
+    found = {}
+    for name, (lat, lon, colour) in C.PYROREGION_NAMES.items():
+        hit = poly.region[poly.contains(Point(lon, lat))].tolist()
+        if len(hit) == 1:
+            found.setdefault(hit[0], []).append((name, colour))
+    if sorted(found) == sorted(poly.region) and all(len(n) == 1 for n in found.values()):
+        return {r: n[0] for r, n in found.items()}
+    return {}
+
+
+def draw(poly, s, title, path, places_path):
+    """The map, one colour per region, with a legend table: colour, number, name with its provinces
+    (from the places file of step 09, if there is one) and burn rate."""
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    from matplotlib.patches import Rectangle
+
+    named = region_names(poly)
+    colour = ({r: c for r, (_, c) in named.items()} if named
+              else {r: PALETTE[i] for i, r in enumerate(sorted(poly.region))})
+    places = (pd.read_csv(places_path).set_index("region") if places_path.exists() else None)
+    if places is not None and set(places.index) != set(poly.region):
+        print(f"  info  {places_path.name} is from another map: legend without places; run step 09 "
+              "--overlay and this step again")
+        places = None
+    fig, (ax, leg) = plt.subplots(1, 2, figsize=(13, 11), gridspec_kw=dict(width_ratios=[1, 1.25], wspace=0.02))
+    poly.plot(ax=ax, color=[colour[r] for r in poly.region], edgecolor="white", linewidth=0.8)
     for _, p in poly.iterrows():
         pt = p.geometry.representative_point()
         ax.annotate(str(p.region), (pt.x, pt.y), ha="center", va="center", fontsize=9,
@@ -303,6 +345,29 @@ def draw(poly, v, nb, title, path):
                     bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8))
     ax.set_title(title, fontsize=10, loc="left")
     ax.set_axis_off()
+
+    leg.set_axis_off()
+    leg.set_xlim(0, 1)
+    leg.set_ylim(0, 1)
+    rows = s.sort_values("region")
+    step = min(0.055, 0.8 / (len(rows) + 1))
+    top = 0.5 + step * (len(rows) + 1) / 2
+    leg.text(0.12, top, "Región (provincias)", fontsize=10, fontweight="bold", va="center")
+    leg.text(1.0, top, "%/año", fontsize=10, fontweight="bold", va="center", ha="right")
+    for i, r in enumerate(rows.itertuples(), start=1):
+        y = top - i * step
+        leg.add_patch(Rectangle((0, y - step * 0.35), 0.05, step * 0.7, color=colour[r.region], lw=0))
+        leg.text(0.07, y, str(r.region), fontsize=10, fontweight="bold", va="center")
+        label = named[r.region][0] if named else ""
+        if places is not None:
+            provinces = top_places(places.loc[r.region, "provinces"])
+            label = f"{label} ({provinces})" if label else provinces
+        leg.text(0.12, y, label, fontsize=10, va="center")
+        leg.text(1.0, y, f"{r.rate_pct:.2f}".replace(".", ","), fontsize=10, va="center", ha="right")
+    leg.text(0, top - (len(rows) + 1) * step,
+             "%/año: área quemada sobre área quemable, 1999 a 2025.\n"
+             f"Provincias con al menos {LEGEND_MIN_SHARE} % del área de la región. Nombres propuestos.",
+             fontsize=8.5, color="#555", va="top")
     FIGS.mkdir(exist_ok=True)
     plt.savefig(path, dpi=160, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -340,9 +405,9 @@ def build(k, offset, force=False):
     s.to_csv(OUT / f"summary_{tag}.csv", index=False, float_format="%.4g")
     fig = FIGS / f"07-regions_{tag}.png"
     km2 = f"{C.MIN_REGION_KM2:,.0f}".replace(",", ".")
-    extra = f" + {len(C.FORCED_SPLIT_POINTS)} piezas patagónicas" if force else ""
-    draw(poly, v, nb_all, f"Pirorregiones de Argentina, borrador\nH3 res 5, REDCAP Ward, k = {k}{extra}, "
-         f"mínimo {km2} km²", fig)
+    extra = f" + {len(C.FORCED_SPLIT_POINTS)} piezas forzadas" if force else ""
+    draw(poly, s, f"Pirorregiones de Argentina, borrador\nH3 res 5, REDCAP Ward, k = {k}{extra}, "
+         f"mínimo {km2} km²", fig, OUT / f"places_{tag}.csv")
     for p in (OUT / f"regions_{tag}.parquet", OUT / f"regions_{tag}_polygons.parquet",
               OUT / f"summary_{tag}.csv", fig):
         print(f"wrote {p.relative_to(REPO)}")
