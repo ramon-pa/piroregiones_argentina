@@ -15,6 +15,9 @@ credentials
 data/
 outputs/*.tif
 outputs/*.parquet
+# Exploratory figures stay local; only the figures we show are tracked
+outputs/*.png
+!outputs/07-regions_r5_k12_forced.png
 
 # macOS
 .DS_Store
