@@ -10,11 +10,17 @@ Local only; reads the step 05, 06 and 07 outputs.
   --splits KMAX    the tree of splits k -> k+1 for k = 2..KMAX-1, from labels_r5.parquet (07 --curve):
                    which region splits, how much of the total sum of squares the split explains, and
                    the variables that set the two parts apart most. To splits_r5.csv.
+  --similar        which regions of the chosen map (k = 12 plus the forced pieces) look most alike: distance between the mean profiles of the regions in the clustering
+                   space of step 07 (same variables, logs, z-scores and family weight), over the
+                   clustered cells; average linkage on those distances for the tree. Whether two
+                   regions touch comes from their polygons. To similar_r5_k12_forced.csv and
+                   outputs/review-similar_k12_forced.png.
 
 Run from the repo root:
 
     uv run python scripts/region_review.py --burned-once 12
     uv run python scripts/region_review.py --splits 20
+    uv run python scripts/region_review.py --similar
 """
 import argparse
 import importlib.util
@@ -126,15 +132,78 @@ def splits(kmax):
     print(f"wrote {path.relative_to(REPO)}")
 
 
+def similar():
+    import geopandas as gpd
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    from scipy.cluster.hierarchy import dendrogram, linkage
+    from scipy.spatial.distance import squareform
+
+    tag = f"r{C.REGIONS_RES}_k12_forced"
+    m = step07()
+    v, _ = m.load()
+    reg = pd.read_parquet(REGIONS / f"regions_{tag}.parquet")
+    assert (reg.cell.to_numpy() == v.cell.to_numpy()).all()
+    kept = v.clustered.to_numpy()
+    X = m.design(v[kept], C.LOG_RATE_OFFSET)
+    centre = X.groupby(reg.region.to_numpy()[kept]).mean()
+    ids = centre.index.to_numpy()
+    d = np.sqrt(((centre.to_numpy()[:, None, :] - centre.to_numpy()[None, :, :]) ** 2).sum(axis=2))
+
+    poly = gpd.read_parquet(REGIONS / f"regions_{tag}_polygons.parquet").set_index("region").loc[ids]
+    named = m.region_names(poly.reset_index())
+    name = {r: named[r][0] if named else str(r) for r in ids}
+    colour = {r: named[r][1] if named else "#888888" for r in ids}
+    near = poly.buffer(1e-6)  # the unioned hexagons are not exactly noded
+    rows = []
+    for i, a in enumerate(ids):
+        for j in range(i + 1, len(ids)):
+            b = ids[j]
+            rows.append({"a": a, "b": b, "name_a": name[a], "name_b": name[b], "distance": d[i, j],
+                         "touch": bool(near.loc[a].intersects(near.loc[b]))})
+    pairs = pd.DataFrame(rows).sort_values("distance")
+    path = REGIONS / f"similar_{tag}.csv"
+    pairs.to_csv(path, index=False, float_format="%.3f")
+    with pd.option_context("display.width", 200):
+        print("closest pairs:")
+        print(pairs.head(10).round(2).to_string(index=False))
+        nn = pd.DataFrame({"region": ids, "name": [name[r] for r in ids],
+                           "closest": [ids[np.argsort(d[i])[1]] for i in range(len(ids))],
+                           "distance": [np.sort(d[i])[1] for i in range(len(ids))]})
+        print("closest region of each:")
+        print(nn.round(2).to_string(index=False))
+    print(f"wrote {path.relative_to(REPO)}")
+
+    z = linkage(squareform(d, checks=False), method="average")
+    fig, ax = plt.subplots(figsize=(9, 7))
+    dn = dendrogram(z, orientation="left", labels=[f"{r}  {name[r]}" for r in ids], ax=ax,
+                    color_threshold=0, above_threshold_color="#555555", leaf_font_size=11)
+    for tick, leaf in zip(ax.get_yticklabels(), dn["leaves"]):
+        ax.plot(0, tick.get_position()[1], "s", ms=11, color=colour[ids[leaf]], clip_on=False, zorder=3)
+    ax.set_xlabel("distancia entre perfiles medios (variables del agrupamiento, en desvíos estándar)", fontsize=10)
+    for s in ("top", "right", "left"):
+        ax.spines[s].set_visible(False)
+    ax.tick_params(axis="y", length=0, pad=14)
+    ax.set_title("Qué pirorregiones se parecen más entre sí", fontsize=12, loc="left")
+    FIGS.mkdir(exist_ok=True)
+    out = FIGS / "review-similar_k12_forced.png"
+    plt.savefig(out, dpi=160, bbox_inches="tight", facecolor="white")
+    print(f"wrote {out.relative_to(REPO)}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--burned-once", type=int, metavar="K", help="map of burned at least once with k = K borders")
     ap.add_argument("--splits", type=int, metavar="KMAX", help="tree of splits up to k = KMAX")
+    ap.add_argument("--similar", action="store_true", help="which regions of the chosen map look most alike")
     args = ap.parse_args()
     if args.burned_once:
         burned_once(args.burned_once)
     if args.splits:
         splits(args.splits)
+    if args.similar:
+        similar()
 
 
 if __name__ == "__main__":
