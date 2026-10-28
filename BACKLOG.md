@@ -15,7 +15,3 @@ en [`ROADMAP.md`](ROADMAP.md); un ítem pasa de acá al ROADMAP cuando se agenda
   asignar por centroide solo variables de eventos, nunca de área.
 - Estabilidad temporal de las regiones con las ventanas parciales de `frequency_burned_v2`
   (`1999_<y>` y `<y>_2025`), como período reservado de la evaluación de D5.
-
-## Presentación
-
-- Versión para el taller de MapBiomas.

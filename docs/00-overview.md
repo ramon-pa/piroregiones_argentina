@@ -38,7 +38,7 @@ ecorregiones de Burkart et al. 1999, y dónde los límites coinciden o se separa
 | 06 | variables del régimen | [`06-variables.md`](06-variables.md) |
 | 07 | pirorregiones a res 5, REDCAP Ward (D13) | [`07-regions.md`](07-regions.md) |
 | 08 | tipos de régimen (opcional) | pendiente |
-| 09 | comparación con ecorregiones | pendiente |
+| 09 | comparación con ecorregiones | empezado: `workflow/09-ecoregions.py` (sin doc todavía) |
 | 10 | figuras y fichas | pendiente |
 
 Las decisiones abiertas que afectan a varios pasos (tipo y tamaño de celda, período, niveles) están

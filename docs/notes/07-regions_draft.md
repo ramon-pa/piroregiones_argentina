@@ -1,4 +1,4 @@
-# 07 · Primer borrador de pirorregiones (2026-10-27)
+# 07 · Borradores de pirorregiones (2026-10-27)
 
 Cuaderno de laboratorio. Scripts: `workflow/06-variables.py --res 5`, `workflow/07-regions.py`.
 Doc: `docs/07-regions.md`. Decisión: D13.
@@ -112,3 +112,24 @@ Cambios de D14. Corridas con `07-regions.py`, 4/4 controles en todas.
   pygeoda. Comparar mapas solo con una de las dos.
 - Mapa elegido: k = 12 + 2 (`regions_r5_k12_forced*`), 14 regiones, `ss_ratio` 0,532.
 
+
+## Tercera pasada (2026-10-27): Delta del Paraná, nombres y parecidos
+
+- **Chequeo contra el acumulado y la cobertura** (mapas ad hoc, sin script): las regiones de fuego
+  frecuente caen sobre los núcleos del quemado al menos una vez, y las de fuego raro sobre lo nunca
+  quemado. Varios bordes siguen la cobertura (Pampa agrícola y bonaerense, Chaco y Corrientes). Las
+  regiones del Chaco occidental y del Espinal son mezclas de coberturas y de niveles de fuego.
+- **Delta del Paraná** (D15): metido en el Espinal, se quemaba bastante más que el resto. El árbol lo
+  separa en k = 25; se fuerza como tercera pieza: 15.401 km², 4,32 %/año. Al forzarlo, una celda de
+  agua en la desembocadura del Uruguay quedó separada de su región y falló el control de conexión;
+  se corrigió reasignando las celdas fuera del agrupamiento sobre el mapa final. 15 regiones,
+  `ss_ratio` 0,536, 4/4 controles.
+- **Bosque andino-patagónico norte** (revisión ad hoc, sin script): entre las piezas de Neuquén y
+  Chubut, el bosque de Río Negro queda en la Estepa patagónica. Entre 41 y 42°S se quema como en
+  Neuquén; entre 40 y 41°S (Nahuel Huapi) casi no registra fuego. El árbol no arma una región continua
+  en ningún k hasta 30. Queda como pregunta para el taller.
+- **Nombres y colores**: propuestos, en `PYROREGION_NAMES`, atados a un punto de cada región. La
+  leyenda del mapa lee las provincias del paso 09.
+- **Regiones parecidas** (`scripts/region_review.py --similar`): los pares más cercanos son vecinos
+  (Andes áridos con Estepa patagónica 0,98; Chaco central con Espinal 1,12; las dos Pampas 1,13). La
+  Selva misionera queda más cerca de la Pampa agrícola (1,62): fuegos chicos y temporada larga.

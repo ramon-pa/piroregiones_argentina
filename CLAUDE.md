@@ -26,36 +26,26 @@ Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/refe
 
 ## 2. Current state (2026-10-27)
 
-- Esqueleto del repo creado, siguiendo la organización del repo de fuego de Iván. Repo git local
-  con remoto `git@github.com:ramon-pa/piroregiones_argentina.git` (privado).
-- Paso 00 listo: `scripts/check_assets.py` verifica todos los insumos de GEE y la carpeta de salida
-  (9/9 el 2026-10-19).
-- Grilla y cómputo medidos sin exportar nada (`docs/notes/01-grid_and_compute.md`).
-- Qué corre en GEE, definido: barrido D6 por año (con mes y tamaño), frecuencia desde el producto
-  publicado (D8), salidas según D7. Nada exportado todavía.
-- Barrido D6 probado en Córdoba con hexágonos reales: todos los controles en verde
-  (`docs/notes/02-sweep_cordoba.md`).
-- Paso 01 listo: grilla H3 res 6 (96.461 celdas, `docs/01-hex_grid.md`) subida al asset `h3_res6`;
-  `workflow/01-hex_grid.py --check` 2/2 el 2026-10-26.
-- Paso 02 listo (`docs/02-sweep.md`): los 27 años corridos, bajados a `data/sweep/` y controlados
-  (27/27); la suma 1999 a 2025 coincide con el equipo de fuego (`docs/notes/03-sweep_national.md`).
-- Paso 04 listo (`docs/04-frequency.md`): frecuencia por celda bajada a `data/frequency/`, 2/2
-  controles; coincide con el paso 02 (`docs/notes/04-frequency.md`).
-- Paso 05 listo (`docs/05-cell_table.md`): tablas decodificadas en `data/tables/`, 5/5 controles.
-  Desde acá todo es local.
-- Paso 06 listo (`docs/06-variables.md`): variables por celda en `data/tables/variables.parquet`,
-  5/5 controles (`docs/notes/06-variables.md`).
-- Decisiones: `docs/decisions.md` (D1, D2, D4, D6 a D14 acordadas; D3 y D5 abiertas).
-  D12 cambia el papel de D4: la tasa por cobertura va a la ficha de cada región, no al clustering.
-- Paso 07, borrador (`docs/07-regions.md`): res 5 con REDCAP (D13), tasa en logaritmo, celdas con
-  < 10 % quemable fuera, k = 12 más tres piezas forzadas, dos patagónicas (D14) y el Delta del
-  Paraná (D15): 15 regiones con nombres propuestos, 4/4 controles, mapa en
-  `outputs/07-regions_r5_k12_forced.png` (`docs/notes/07-regions_draft.md`). Abierto: una región
-  continua de bosque andino-patagónico norte (slide "A discutir").
-- Paso 09 empezado: `workflow/09-ecoregions.py` baja ecorregiones y provincias y dice dónde cae
-  cada región. Falta la comparación cuantitativa.
-- Presentación del taller (borrador): https://claude.ai/artifact/HoQ5bdgQzdFd4r8aLEW8AE (privada).
-- Próximo: `ROADMAP.md`.
+Repo: `git@github.com:ramon-pa/piroregiones_argentina.git` (privado), organizado como el repo de
+fuego de Iván.
+
+| Paso | Estado | Doc |
+|---|---|---|
+| 00 insumos de GEE | listo, 9/9 (2026-10-19) | `scripts/check_assets.py` |
+| 01 grilla H3 res 6 | listo, asset `h3_res6`, 2/2 | `docs/01-hex_grid.md` |
+| 02 barrido D6, 27 años | listo, 27/27; suma igual a la del equipo de fuego | `docs/02-sweep.md` |
+| 04 frecuencia por celda | listo, 2/2; coincide con el 02 | `docs/04-frequency.md` |
+| 05 tablas decodificadas | listo, 5/5; desde acá todo es local | `docs/05-cell_table.md` |
+| 06 variables por celda | listo, 5/5 (res 6 y res 5) | `docs/06-variables.md` |
+| 07 pirorregiones | **borrador**: k = 12 más tres piezas forzadas (D14, D15), 15 regiones con nombres propuestos, 4/4 | `docs/07-regions.md` |
+| 09 comparación con ecorregiones | empezado: dónde cae cada región; falta lo cuantitativo | `workflow/09-ecoregions.py` |
+| 10 fichas | pendiente, después del taller | |
+
+Decisiones: D1, D2, D4, D6 a D15 acordadas; D3 y D5 abiertas (`docs/decisions.md`). Pregunta
+abierta del mapa: una región continua de bosque andino-patagónico norte (no la arma el método).
+
+Presentación del taller (borrador, 6 slides): https://claude.ai/artifact/HoQ5bdgQzdFd4r8aLEW8AE
+(privada). Qué sigue: `ROADMAP.md`.
 
 Página de seguimiento: https://claude.ai/artifact/Eqz68NSP4Y8vRDLTqRL5m5 (compartida por link).
 Es una vista de este repo; si difieren, manda el repo.
@@ -211,11 +201,9 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Tasa de quema media anual por clase, nacional 1999 a 2025 | p. ej. 19 Cultivos temporarios 0,20 %, 15 Pastura 1,65 %, 11 Herbáceas inundables 3,47 %, 6 4,06 % (tabla completa con `--classes`) | `workflow/05-cell_table.py --classes`, 2026-10-26 | verificado |
 | Variables por celda (paso 06) | 5/5 controles; tasa nacional 0,933 % del área quemable por año; 36.909 celdas sin fuego en clases quemables (38 %); mes pico más común: ene en Patagonia, sep en Chaco | `workflow/06-variables.py --build`, 2026-10-26; `docs/notes/06-variables.md` | verificado |
 | Variables a res 5 (paso 06 `--res 5`) | 14.137 celdas, 5/5 controles, mismos totales que res 6 (63,177 Mha quemadas, 250,797 Mha quemables); 3.099 celdas sin fuego (22 %, contra 38 % a res 6) | `workflow/06-variables.py --build --res 5`, 2026-10-27 | verificado |
-| Pirorregiones, k = 12 + 3 piezas (D14, D15) | 15 regiones, 4/4 controles; `ss_ratio` 0,536; Delta del Paraná 15.401 km² y 4,32 %/año (la más alta), Espinal sin el Delta 1,14 %/año | `workflow/07-regions.py --build --k 12 --force`, 2026-10-27 | verificado; **borrador** |
-| Pirorregiones, k = 12 + 2 piezas patagónicas (D14, reemplazado por D15) | 14 regiones, 4/4 controles; varianza explicada 0,532 (`ss_ratio`; pygeoda mide distinto); oeste de Neuquén 9.698 km² y 0,41 %/año, oeste de Chubut 22.071 km² y 0,34 %/año, resto de Patagonia 0,05 %/año | `workflow/07-regions.py --build --k 12 --force`, 2026-10-27 | verificado; **borrador** |
+| Pirorregiones, k = 12 + 3 piezas (D14, D15) | 15 regiones, 4/4 controles; `ss_ratio` 0,536 (pygeoda mide distinto); Delta del Paraná 15.401 km² y 4,32 %/año (la más alta), Espinal sin el Delta 1,14 %/año; oeste de Neuquén 9.698 km² y 0,41 %/año, oeste de Chubut 22.071 km² y 0,34 %/año, Estepa patagónica 0,05 %/año | `workflow/07-regions.py --build --k 12 --force`, 2026-10-27 | verificado; **borrador** |
 | Regiones más parecidas (k = 12 + 3), distancia entre perfiles medios | Andes áridos y Puna con Estepa patagónica 0,98; Chaco central con Espinal 1,12; Pampa agrícola con Pampa bonaerense 1,13; Selva misionera más cerca de la Pampa agrícola (1,62) | `scripts/region_review.py --similar`, 2026-10-27 | verificado |
 | Bosque patagónico (≥ 50 % bosque) por latitud | 0,29 a 0,30 %/año al norte de 43°S; 0,008 a 0,022 %/año al sur de 46°S | cálculo ad hoc sobre `variables_r5.parquet`, 2026-10-27; en `docs/notes/07-regions_draft.md` | verificado; **sin script en el repo** |
-| Borrador de pirorregiones, k = 15 (primera pasada, antes de D14) | 4/4 controles; varianza explicada (between/total) 0,460; región más chica 19.058 km², la más grande 809.383 km²; 15 a 40 s por corrida | `workflow/07-regions.py --build`, 2026-10-27 | verificado; **borrador** |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
@@ -244,9 +232,6 @@ Antes de que cualquiera de estos números vaya a un mail o a la presentación: s
   dentro del AOI agrícola de la Pampa. Fuente: `docs/07-vector_to_raster.md`, "Object exclusion
   ruleset". Consecuencia: la tasa de quema agrícola está subestimada por construcción.
 - **El producto no tiene intensidad (FRP) ni causa de ignición.** Los antecedentes las usan.
-- **Celdas de borde casi sin área quemable forman su propia región.** En el borrador del 07, la
-  región 10 es el Río de la Plata y la costa: 15,5 % de área quemable. Pendiente de tratar
-  (`docs/notes/07-regions_draft.md`).
 - **pygeoda REDCAP con varios hilos se cae** al azar (`std::length_error`). Usar `cpu_threads=1`
   (`docs/07-regions.md`, "Trampas").
 - Gotchas de GEE generales: no se copian acá, están en `~/Desktop/GIS/geospatial-skills/SKILLS/gee-gotchas.md`.

@@ -98,10 +98,11 @@ uv run python workflow/09-ecoregions.py --overlay --k 12 --forced   # provincias
 |---|---|
 | `workflow/07-regions.py` | grafo, REDCAP, polígonos, resumen, mapa, curva de k y controles |
 | `workflow/06-variables.py` | `--res 5`: las variables a res 5 |
-| `utils/constants.py` | `REGIONS_RES`, `REGIONS_K`, `MIN_REGION_KM2`, `COMPOSITION_WEIGHT`, `REGIONS_DIR` |
+| `utils/constants.py` | `REGIONS_RES`, `REGIONS_K`, `MIN_REGION_KM2`, `COMPOSITION_WEIGHT`, `REGIONS_DIR`, `FORCED_SPLIT_POINTS`, `PYROREGION_NAMES` |
+| `scripts/region_review.py` | revisión del mapa: quemado al menos una vez, árbol de particiones, regiones parecidas |
 
 ## Relacionado
 
-- `docs/decisions.md`: D1, D5, D12, D13.
+- `docs/decisions.md`: D1, D5, D12, D13, D14, D15.
 - `docs/notes/07-redcap_scaling.md`: por qué res 5.
-- `docs/notes/07-regions_draft.md`: el primer borrador, medido.
+- `docs/notes/07-regions_draft.md`: los borradores, medidos, de k = 15 al mapa de 15 regiones.

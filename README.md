@@ -39,9 +39,9 @@ En Positron, elegir como kernel el Python de `.venv/`, no el del sistema.
 | [`ROADMAP.md`](ROADMAP.md) | qué sigue, en orden |
 | [`BACKLOG.md`](BACKLOG.md) | ideas sin agendar |
 | `utils/constants.py` | **única fuente de verdad**: assets, años, grilla, nombres de tareas |
-| `scripts/` | lo que no es un paso del pipeline: chequeos, lanzadores |
-| `workflow/` | los pasos numerados del pipeline (se crea con el primer paso) |
+| `scripts/` | lo que no es un paso del pipeline: chequeos, mediciones, revisión de regiones |
+| `workflow/` | los pasos numerados del pipeline, uno por script |
 | [`docs/`](docs/) | `00-overview.md`, un doc por paso, `TEMPLATE.md`, `decisions.md`, `references.md` |
 | [`docs/notes/`](docs/notes/) | cuaderno de laboratorio: pruebas, caminos abandonados, resultados con fecha |
 | `data/` | datos locales, fuera de git |
-| `outputs/` | figuras |
+| `outputs/` | figuras; en git solo el mapa de pirorregiones, las demás quedan locales |
