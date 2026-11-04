@@ -258,6 +258,13 @@ Ese remapeo se armó sobre la col-2 (comentario de `statistics/legends.py` del r
 códigos de clase que usa existen igual en la col-3. Un par región-clase que no figura toma la familia
 más común de esa clase: 0,52 Mha por año, 0,2 % del área quemable (`06-variables.py`, 2026-10-26).
 
+**Clase 21 (Mosaico de usos) fuera de Cuyo y Patagonia: pastizal** (Ramón, 2026-10-28). El remapeo la
+pone en pastizal en Cuyo y en agricultura en Patagonia, así que la familia más común empataba y la
+elegía la semilla de hash de Python: 50 celdas de res 5 cambiaban entre corridas. Ahora el desempate
+es determinístico y la 21 queda fijada en `FALLBACK_FAMILY`. Pesa 0,02 Mha quemables por año, casi
+todo en Pampa. Es la familia con la que se armó el mapa elegido: las variables de res 5 y res 6 no
+cambian (comprobado con tres semillas).
+
 ## D12 · Qué describe a cada celda en el clustering · acordada (2026-10-26)
 
 **Acordado** (Ramón, 2026-10-26, las cinco recomendaciones). Reemplaza el papel de D4 en el
@@ -334,9 +341,10 @@ no coincide con la cifra de pygeoda; ver la nota del paso).
 entre Santa Fe, Entre Ríos y Buenos Aires, metida en la región del Espinal. Medido (revisión ad hoc,
 sin script en el repo): las 174 celdas de esa región con el centro en la ecorregión Delta e Islas del
 Paraná se queman 3,08 %/año, el resto de la región 1,10 %. El árbol de REDCAP la separa recién en
-k = 25: una pieza de 84 celdas, 85 % en el Delta, entre 32,2 y 34°S.
+k = 24 (corregido el 2026-10-28; decía 25): una pieza de 84 celdas, 85 % en el Delta, entre 32,2 y
+34°S. La pieza es idéntica en k = 24 y 25 (`labels_r5.parquet`).
 
-1. **La pieza del nivel k = 25** se fuerza como las patagónicas (D14). Cada pieza toma ahora su
+1. **La pieza del nivel k = 25** (la misma que en k = 24) se fuerza como las patagónicas (D14). Cada pieza toma ahora su
    propio nivel (`FORCED_SPLIT_POINTS` lleva el k). Resultado: 15.401 km², 4,32 %/año, la tasa más
    alta del mapa; el Espinal queda en 1,14 %/año. Mapa de 15 regiones, `ss_ratio` 0,536.
 2. **Las celdas fuera del agrupamiento** (D14, punto 2) se reasignan sobre el mapa final, con las

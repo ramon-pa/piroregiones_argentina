@@ -21,6 +21,10 @@ weights survive (pygeoda standardizes by default).
   --force           add the pieces of C.FORCED_SPLIT_POINTS, each taken from its own deeper k level of
                     the same tree (decisions D14 and D15); adds _forced to the names.
   --log-offset X    another offset for the log of the rate (sensitivity); adds _off<X> to the names.
+  --pool            the variables of 06-variables.py --pool (sensitivity, 2026-10-28); adds _pool.
+  --cover-by-fire   candidate (2026-10-28): family weight by the fire each cell saw, up to
+                    C.COVER_BY_FIRE_TOP, and the pieces of C.COVER_BY_FIRE_FORCED with --force;
+                    names from C.PYROREGION_NAMES_BY_FIRE; adds _coverfire.
   --curve  between-to-total sum of squares for k = 2..30, one process per k, to k_curve_r5.csv,
            and the region of every cell at each k (numbered as in --build) to labels_r5.parquet.
 
@@ -60,14 +64,15 @@ PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6
 LEGEND_MIN_SHARE = 10
 
 
-def load():
-    """Res 5 variables, res 6 grid with each child's parent id, the area of each res 5 cell, and
+def load(pool=False):
+    """Res 5 variables (with pool, those of 06-variables.py --pool), res 6 grid with each child's parent id, the area of each res 5 cell, and
     whether it enters the clustering (burnable share at least C.MIN_BURNABLE_SHARE)."""
     import geopandas as gpd
     import numpy as np
     import pandas as pd
 
-    v = pd.read_parquet(TABLES / f"variables_r{C.REGIONS_RES}.parquet").rename(columns={"region": "region_mb"})
+    name = f"variables_r{C.REGIONS_RES}{'_pool' if pool else ''}.parquet"
+    v = pd.read_parquet(TABLES / name).rename(columns={"region": "region_mb"})
     g = gpd.read_parquet(GRID)
     g["parent"] = np.searchsorted(v.h3.to_numpy(), g.h3_r5.to_numpy())
     assert (v.h3.to_numpy()[g.parent] == g.h3_r5.to_numpy()).all(), "res 6 parent not in variables_r5"
@@ -147,17 +152,46 @@ def weights(nb, ids):
     return pygeoda.read_gal(f.name, [str(c) for c in ids])
 
 
-def design(v, offset):
+def design(v, offset, cover_w=None):
     """The clustering matrix of the given cells: log rate and recurrence, z-scores, the family
-    shares weighted by C.COMPOSITION_WEIGHT."""
+    shares weighted by C.COMPOSITION_WEIGHT, or by `cover_w` per cell when given."""
     import numpy as np
 
     X = v[FIRE_VARS + FAM_VARS].astype("float")
     X["rate"] = np.log10(X.rate + offset)
     X["recurrence"] = np.log1p(X.recurrence)
     X = (X - X.mean()) / X.std(ddof=0).where(lambda s: s > 0, 1)
-    X[FAM_VARS] *= C.COMPOSITION_WEIGHT
+    if cover_w is None:
+        X[FAM_VARS] *= C.COMPOSITION_WEIGHT
+    else:
+        X[FAM_VARS] = X[FAM_VARS].mul(cover_w, axis=0)
     return X
+
+
+def fire_records(v):
+    """Months of a year with fire on burnable classes in each res 5 cell of `v` (its own history,
+    not pooled), from the step 05 tables: the records of C.POOL_MIN_EVENTS."""
+    import numpy as np
+    import pandas as pd
+
+    cells = pd.read_parquet(TABLES / "cells.parquet")
+    sweep = pd.read_parquet(TABLES / "sweep.parquet", columns=["cell", "year", "cls", "month", "ha"])
+    burned = sweep[sweep.cls.isin(C.BURNABLE_CLASSES) & (sweep.month > 0) & (sweep.ha > 0)]
+    parent = np.searchsorted(v.h3.to_numpy(), cells.h3_r5.to_numpy())
+    assert (v.h3.to_numpy()[parent] == cells.h3_r5.to_numpy()).all()
+    lookup = np.empty(cells.cell.max() + 1, dtype="int32")
+    lookup[cells.cell.to_numpy()] = parent
+    b = pd.DataFrame({"cell": lookup[burned.cell.to_numpy()], "ym": burned.year.to_numpy() * 100 + burned.month.to_numpy()})
+    return b.drop_duplicates().groupby("cell").size().reindex(v.cell).fillna(0).astype(int).to_numpy()
+
+
+def cover_by_fire(rec, top, min_records=C.POOL_MIN_EVENTS):
+    """Family weight per cell: C.COMPOSITION_WEIGHT with `min_records` fire records or more, rising
+    linearly to `top` with none."""
+    import numpy as np
+
+    seen = np.minimum(rec, min_records) / min_records
+    return C.COMPOSITION_WEIGHT + (top - C.COMPOSITION_WEIGHT) * (1 - seen)
 
 
 def redcap(k, w, X, area):
@@ -172,12 +206,14 @@ def redcap(k, w, X, area):
 
 def cluster(v, nb_raw, k, offset):
     """REDCAP on the clustered cells. Returns their labels (indexed like v[v.clustered]), the
-    between/total ratio, the graph used and its links."""
+    between/total ratio, the graph used and its links. A `cover_w` column of v, when there is one,
+    is the family weight of each cell."""
     import pandas as pd
 
     kept = v[v.clustered]
     nb_kept, links = connected(nb_raw, kept.cell, v)
-    labels, ratio = redcap(k, weights(nb_kept, list(kept.cell)), design(kept, offset), kept.area_km2)
+    X = design(kept, offset, kept.cover_w if "cover_w" in kept else None)
+    labels, ratio = redcap(k, weights(nb_kept, list(kept.cell)), X, kept.area_km2)
     return pd.Series(labels, index=kept.index), ratio, nb_kept, links
 
 
@@ -248,24 +284,25 @@ def summary(v, poly):
 
 def ss_ratio(v, offset):
     """Between-to-total sum of squares of the final regions, over the clustered cells."""
-    X = design(v[v.clustered], offset)
+    kept = v[v.clustered]
+    X = design(kept, offset, kept.cover_w if "cover_w" in kept else None)
     lab = v.region[v.clustered]
     within = sum(((X[lab == r] - X[lab == r].mean()) ** 2).sum().sum() for r in lab.unique())
     return 1 - within / float((X ** 2).sum().sum())
 
 
-def force_splits(v, nb_raw, nb_all, offset):
-    """Give each piece of C.FORCED_SPLIT_POINTS, taken from its own k level, a region of its own. Each
-    piece must lie inside one region of the current map."""
+def force_splits(v, nb_raw, nb_all, offset, points):
+    """Give each piece of `points` (name: lat, lon, k), taken from its own k level, a region of its
+    own. Each piece must lie inside one region of the current map."""
     import h3
     import pandas as pd
 
     deep_at = {}
-    for k in sorted({k for _, _, k in C.FORCED_SPLIT_POINTS.values()}):
+    for k in sorted({k for _, _, k in points.values()}):
         labels, _, _, _ = cluster(v, nb_raw, k, offset)
         deep_at[k] = assign_excluded(v, labels, nb_all)
     region = v.region.to_numpy().copy()
-    for name, (lat, lon, k) in C.FORCED_SPLIT_POINTS.items():
+    for name, (lat, lon, k) in points.items():
         deep = deep_at[k]
         at = (v.h3 == h3.latlng_to_cell(lat, lon, C.REGIONS_RES)).to_numpy()
         assert at.sum() == 1, f"{name}: the point is in no res {C.REGIONS_RES} cell of the grid"
@@ -306,13 +343,13 @@ def top_places(text):
     return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} y {names[-1]}"
 
 
-def region_names(poly):
-    """Name and colour of each region from C.PYROREGION_NAMES, by the polygon holding each point. Only
-    when every region gets exactly one name; otherwise none (another map)."""
+def region_names(poly, names=C.PYROREGION_NAMES):
+    """Name and colour of each region from `names` (name: lat, lon, colour), by the polygon holding
+    each point. Only when every region gets exactly one name; otherwise none (another map)."""
     from shapely.geometry import Point
 
     found = {}
-    for name, (lat, lon, colour) in C.PYROREGION_NAMES.items():
+    for name, (lat, lon, colour) in names.items():
         hit = poly.region[poly.contains(Point(lon, lat))].tolist()
         if len(hit) == 1:
             found.setdefault(hit[0], []).append((name, colour))
@@ -321,14 +358,14 @@ def region_names(poly):
     return {}
 
 
-def draw(poly, s, title, path, places_path):
+def draw(poly, s, title, path, places_path, names=C.PYROREGION_NAMES):
     """The map, one colour per region, with a legend table: colour, number, name with its provinces
     (from the places file of step 09, if there is one) and burn rate."""
     import matplotlib.pyplot as plt
     import pandas as pd
     from matplotlib.patches import Rectangle
 
-    named = region_names(poly)
+    named = region_names(poly, names)
     colour = ({r: c for r, (_, c) in named.items()} if named
               else {r: PALETTE[i] for i, r in enumerate(sorted(poly.region))})
     places = (pd.read_csv(places_path).set_index("region") if places_path.exists() else None)
@@ -373,10 +410,20 @@ def draw(poly, s, title, path, places_path):
     plt.close(fig)
 
 
-def build(k, offset, force=False):
+def build(k, offset, force=False, pool=False, cover_fire=False):
     import pandas as pd
 
-    v, g = load()
+    v, g = load(pool)
+    points, names = C.FORCED_SPLIT_POINTS, C.PYROREGION_NAMES
+    if cover_fire:
+        rec = fire_records(v)
+        v["cover_w"] = cover_by_fire(rec, C.COVER_BY_FIRE_TOP)
+        points = C.COVER_BY_FIRE_FORCED
+        names = C.PYROREGION_NAMES_BY_FIRE
+        kept = v.clustered.to_numpy()
+        print(f"  info  family weight by fire seen: {(v.cover_w[kept] > C.COMPOSITION_WEIGHT).sum():,} of "
+              f"{kept.sum():,} clustered cells above {C.COMPOSITION_WEIGHT}, {(rec[kept] == 0).sum():,} at "
+              f"{C.COVER_BY_FIRE_TOP} (no fire record)")
     nb_raw = adjacency(v, g)
     nb_all, links_all = connected(nb_raw, v.cell, v)
     print(f"  info  clustered {v.clustered.sum():,} cells; left out (burnable < "
@@ -389,15 +436,15 @@ def build(k, offset, force=False):
     v["region"] = number_north_to_south(v, assign_excluded(v, labels, nb_all))
     n_regions = k
     if force:
-        v["region"] = number_north_to_south(v, force_splits(v, nb_raw, nb_all, offset))
-        n_regions = k + len(C.FORCED_SPLIT_POINTS)
+        v["region"] = number_north_to_south(v, force_splits(v, nb_raw, nb_all, offset, points))
+        n_regions = k + len(points)
         # ss_ratio, not pygeoda's ratio: the two differ (k = 12: 0.523 against 0.469, 2026-10-27; not
         # explained yet), so compare forced and unforced maps with ss_ratio only.
         print(f"with the forced pieces: {n_regions} regions, between/total (ss_ratio) {ss_ratio(v, offset):.3f}")
 
     OUT.mkdir(parents=True, exist_ok=True)
-    tag = (f"r{C.REGIONS_RES}_k{k}" + ("_forced" if force else "")
-           + ("" if offset == C.LOG_RATE_OFFSET else f"_off{offset:g}"))
+    tag = (f"r{C.REGIONS_RES}_k{k}" + ("_forced" if force else "") + ("_pool" if pool else "")
+           + ("_coverfire" if cover_fire else "") + ("" if offset == C.LOG_RATE_OFFSET else f"_off{offset:g}"))
     v[["cell", "h3", "region", "clustered"]].to_parquet(OUT / f"regions_{tag}.parquet", index=False)
     poly = polygons(v, g)
     poly.to_parquet(OUT / f"regions_{tag}_polygons.parquet", index=False)
@@ -405,9 +452,13 @@ def build(k, offset, force=False):
     s.to_csv(OUT / f"summary_{tag}.csv", index=False, float_format="%.4g")
     fig = FIGS / f"07-regions_{tag}.png"
     km2 = f"{C.MIN_REGION_KM2:,.0f}".replace(",", ".")
-    extra = f" + {len(C.FORCED_SPLIT_POINTS)} piezas forzadas" if force else ""
+    extra = (f" + {len(points)} pieza{'s' if len(points) > 1 else ''} forzada{'s' if len(points) > 1 else ''}"
+             if force else "")
+    extra += ", historia de celdas con poco fuego sumada a sus vecinas" if pool else ""
+    extra += (",\ncobertura con peso según el fuego visto "
+                  f"({C.COMPOSITION_WEIGHT:g} a {C.COVER_BY_FIRE_TOP:g})".replace(".", ",")) if cover_fire else ""
     draw(poly, s, f"Pirorregiones de Argentina, borrador\nH3 res 5, REDCAP Ward, k = {k}{extra}, "
-         f"mínimo {km2} km²", fig, OUT / f"places_{tag}.csv")
+         f"mínimo {km2} km²", fig, OUT / f"places_{tag}.csv", names)
     for p in (OUT / f"regions_{tag}.parquet", OUT / f"regions_{tag}_polygons.parquet",
               OUT / f"summary_{tag}.csv", fig):
         print(f"wrote {p.relative_to(REPO)}")
@@ -490,12 +541,14 @@ def main():
     ap.add_argument("--k", type=int, nargs="+", default=[C.REGIONS_K], help="number(s) of regions for --build")
     ap.add_argument("--log-offset", type=float, default=C.LOG_RATE_OFFSET, help="offset of log10(rate + offset)")
     ap.add_argument("--force", action="store_true", help="add the forced pieces of decision D14")
+    ap.add_argument("--pool", action="store_true", help="sensitivity: variables of 06-variables.py --pool")
+    ap.add_argument("--cover-by-fire", action="store_true", help="candidate: family weight by the fire each cell saw")
     args = ap.parse_args()
     if args.curve:
         curve(args.log_offset)
     if args.build or not args.curve:
         for k in args.k:
-            build(k, args.log_offset, args.force)
+            build(k, args.log_offset, args.force, args.pool, args.cover_by_fire)
 
 
 if __name__ == "__main__":

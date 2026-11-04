@@ -15,6 +15,10 @@ contiguity graph of step 07 has no holes.
   --res 5   the same at res 5, to variables_r5.parquet: the areas of the seven res 6 children are
             summed into their parent before any variable is computed (decision D1), so the cell id
             becomes the parent's (0..14,136, in h3_r5 order) and h3 its res 5 index.
+  --pool    sensitivity for step 07: cells with fewer than C.POOL_MIN_EVENTS fire records (months
+            of a year with fire) take peak, season length, size share and CV from their history
+            summed with their neighbours', ring by ring up to C.POOL_MAX_RING. Rate, recurrence
+            and cover stay the cell's own. Adds _pool to the file name (variables_r5_pool.parquet).
 
 Run from the repo root:
 
@@ -22,6 +26,7 @@ Run from the repo root:
     uv run python workflow/06-variables.py --fetch
     uv run python workflow/06-variables.py --build
     uv run python workflow/06-variables.py --build --res 5
+    uv run python workflow/06-variables.py --build --res 5 --pool
 """
 import argparse
 import sys
@@ -55,8 +60,9 @@ def export(force):
     print(f"started {C.REGION_TASK} -> Drive/{C.DRIVE_FOLDER}/{C.REGION_TASK}.csv  (task {task.id})")
 
 
-def variables_path(res):
-    return TABLES / ("variables.parquet" if res == C.H3_RES else f"variables_r{res}.parquet")
+def variables_path(res, pool=False):
+    name = "variables" if res == C.H3_RES else f"variables_r{res}"
+    return TABLES / f"{name}{'_pool' if pool else ''}.parquet"
 
 
 def to_parent(cells, *tables):
@@ -119,7 +125,39 @@ def fill_from_neighbours(cells, values, how):
     return vals
 
 
-def build(res):
+def pool_neighbours(cells, burned, yearly, monthly, large, fired):
+    """Sum the history of each cell with fewer than C.POOL_MIN_EVENTS fire records with that of its
+    neighbours, ring by ring, until the union has that many records or C.POOL_MAX_RING is reached.
+    Records: distinct (year, month) with fire. Returns the pooled arrays and, per cell, the ring used
+    (0 = own history) and the records in the pooled history."""
+    import h3
+    import numpy as np
+
+    n = len(cells)
+    ym = burned.groupby(["cell", "year", "month"]).ha.sum()
+    ym = ym[ym > 0].reset_index()
+    E = np.zeros((n, len(C.FIRE_YEARS) * 12), dtype=bool)
+    E[ym.cell.to_numpy(), (ym.year.to_numpy() - C.FIRE_YEARS[0]) * 12 + ym.month.to_numpy() - 1] = True
+    events = E.sum(axis=1)
+    row = dict(zip(cells.h3, cells.cell))
+    out = [a.copy() for a in (yearly, monthly, large, fired)]
+    ring = np.zeros(n, dtype="int8")
+    pooled_events = events.copy()
+    for c, h in zip(cells.cell, cells.h3):
+        if events[c] >= C.POOL_MIN_EVENTS:
+            continue
+        for r in range(1, C.POOL_MAX_RING + 1):
+            disk = [row[x] for x in h3.grid_disk(h, r) if x in row]
+            got = int(E[disk].any(axis=0).sum())
+            if got >= C.POOL_MIN_EVENTS:
+                break
+        for src, dst in zip((yearly, monthly, large, fired), out):
+            dst[c] = src[disk].sum(axis=0)
+        ring[c], pooled_events[c] = r, got
+    return (*out, ring, pooled_events)
+
+
+def build(res, pool=False):
     import numpy as np
     import pandas as pd
 
@@ -142,14 +180,28 @@ def build(res):
     v["burned_ha"] = burned.groupby("cell").ha.sum().reindex(idx).fillna(0)
     v["no_fire"] = v.burned_ha == 0
 
+    # The histories each variable is computed from: area by year, by month, in large scars, in all.
+    # With --pool, those of the cells with few fire records are summed with their neighbours'.
+    yearly = burned.groupby(["cell", "year"]).ha.sum().unstack(fill_value=0).reindex(
+        index=idx, columns=C.FIRE_YEARS, fill_value=0).to_numpy()
+    monthly = burned.groupby(["cell", "month"]).ha.sum().unstack(fill_value=0).reindex(
+        index=idx, columns=range(1, 13), fill_value=0).to_numpy()
+    large = burned[burned["size"] >= LARGE_SIZE_CLASS].groupby("cell").ha.sum().reindex(idx).fillna(0).to_numpy()
+    fired = v.burned_ha.to_numpy()
+    if pool:
+        yearly, monthly, large, fired, ring, events = pool_neighbours(cells, burned, yearly, monthly, large, fired)
+        v["pool_ring"], v["pool_events"] = ring, events
+        print(f"  info  pooled cells (< {C.POOL_MIN_EVENTS} fire records): "
+              + ", ".join(f"ring {r}: {(ring == r).sum():,}" for r in range(1, C.POOL_MAX_RING + 1))
+              + f"; still short after ring {C.POOL_MAX_RING}: {((ring > 0) & (events < C.POOL_MIN_EVENTS)).sum():,}"
+              + f", with no fire even pooled: {((ring > 0) & (fired == 0)).sum():,}")
+
     # 1. Burn rate, % of burnable area per year (Boulanger et al. 2014, p. 366; Erni et al. 2020, p. 8).
     v["rate"] = np.where(v.burnable_ha > 0, v.burned_ha / N_YEARS / v.burnable_ha * 100, 0.0)
 
     # 2. Interannual variability, CV of the yearly burned area (Naval-Fernández et al. 2025, pp. 6-7).
-    yearly = burned.groupby(["cell", "year"]).ha.sum().unstack(fill_value=0).reindex(
-        index=idx, columns=C.FIRE_YEARS, fill_value=0)
     mean = yearly.mean(axis=1)
-    v["cv"] = np.where(mean > 0, yearly.std(axis=1, ddof=0) / mean.where(mean > 0, 1), CV_NO_FIRE)
+    v["cv"] = np.where(mean > 0, yearly.std(axis=1) / np.where(mean > 0, mean, 1), CV_NO_FIRE)
 
     # 3. Recurrence: 99th quantile of the times each hectare of the cell burned, 0 included
     # (Segura-Garcia et al. 2025, "Methods" (b)(i); no smoothing of the ECDF here). The 0 area is the
@@ -166,8 +218,6 @@ def build(res):
     # where half the burned area is reached (Segura-Garcia et al. 2025). Length = 2 standard
     # deviations of the month in that fire-year (Cattau et al. 2022, Table 1, p. 4, there in Julian
     # days). The peak is circular, so it enters step 07 as sine and cosine.
-    monthly = burned.groupby(["cell", "month"]).ha.sum().unstack(fill_value=0).reindex(
-        index=idx, columns=range(1, 13), fill_value=0).to_numpy()
     top = monthly.argmax(axis=1)                                    # 0-based month of the maximum
     order = (top[:, None] + np.arange(-5, 7)[None, :]) % 12         # calendar index per position
     ordered = np.take_along_axis(monthly, order, axis=1)
@@ -188,8 +238,7 @@ def build(res):
 
     # 6. Size: share of the burned area in scars of 500 ha or more (Galizia et al. 2023, p. 3, by
     # number of fires over 100 ha; here by area). No fire: 0, the smallest size (Segura-Garcia).
-    large = burned[burned["size"] >= LARGE_SIZE_CLASS].groupby("cell").ha.sum().reindex(idx).fillna(0)
-    v["large_share"] = np.where(v.burned_ha > 0, large / v.burned_ha.where(v.burned_ha > 0, 1), 0.0)
+    v["large_share"] = np.where(fired > 0, large / np.where(fired > 0, fired, 1), 0.0)
 
     # Composition of the burnable area by family, with the cell's region (Boulanger et al. 2014,
     # p. 368: fuel composition enters the clustering with weight 0.2; D11).
@@ -198,7 +247,10 @@ def build(res):
     common = {}
     for (r, c), f in C.FAMILY_BY_REGION_CLASS.items():
         common.setdefault(c, []).append(f)
-    fallback = {c: max(set(fs), key=fs.count) for c, fs in common.items()}
+    # Sorted, so a tie no longer depends on Python's hash seed (it did for class 21 until
+    # 2026-10-28); the ties are settled in C.FALLBACK_FAMILY.
+    fallback = {c: max(sorted(set(fs)), key=fs.count) for c, fs in common.items()}
+    fallback.update(C.FALLBACK_FAMILY)
     pair = list(zip(comp.region, comp.cls))
     comp["family"] = [C.FAMILY_BY_REGION_CLASS.get(p, fallback.get(p[1])) for p in pair]
     comp["fallback"] = [p not in C.FAMILY_BY_REGION_CLASS for p in pair]
@@ -210,7 +262,7 @@ def build(res):
 
     v = v.reset_index()
     v["h3"] = cells.h3.to_numpy()
-    out = variables_path(res)
+    out = variables_path(res, pool)
     v.to_parquet(out, index=False)
     print(f"wrote {out.relative_to(REPO)}  {len(v):,} cells")
     unmapped = comp[comp.family.isna()].ha.sum()
@@ -218,13 +270,13 @@ def build(res):
     print(f"  info  family by fallback (region-class pair not in the fire team's remap): "
           f"{fb.ha.sum() / N_YEARS / 1e6:.3f} Mha per year, classes {sorted(fb.cls.unique())}; "
           f"with no family at all {unmapped / N_YEARS:,.0f} ha per year")
-    check(res, burned_total=burned.ha.sum(), burnable_total=burnable.ha.sum() / N_YEARS)
+    check(res, burned_total=burned.ha.sum(), burnable_total=burnable.ha.sum() / N_YEARS, pool=pool)
 
 
-def check(res, burned_total=None, burnable_total=None):
+def check(res, burned_total=None, burnable_total=None, pool=False):
     import pandas as pd
 
-    v = pd.read_parquet(variables_path(res))
+    v = pd.read_parquet(variables_path(res, pool))
     if burned_total is None:
         sweep = pd.read_parquet(TABLES / "sweep.parquet", columns=["cls", "month", "ha"])
         b = sweep[sweep.cls.isin(C.BURNABLE_CLASSES)]
@@ -272,6 +324,7 @@ def main():
     ap.add_argument("--build", action="store_true", help="compute the variables, then --check (default)")
     ap.add_argument("--check", action="store_true", help="controls on variables.parquet")
     ap.add_argument("--force", action="store_true", help="--export even if the task already exists")
+    ap.add_argument("--pool", action="store_true", help="sensitivity: pool the history of cells with few fires")
     ap.add_argument("--res", type=int, choices=[5, C.H3_RES], default=C.H3_RES,
                     help="resolution of --build and --check (5 = children summed into parents)")
     args = ap.parse_args()
@@ -282,9 +335,9 @@ def main():
     if args.fetch:
         fetch_csvs([f"{C.REGION_TASK}.csv"], REGION_CSV.parent)
     if args.check:
-        check(args.res)
+        check(args.res, pool=args.pool)
     elif args.build or not (args.export or args.status or args.fetch):
-        build(args.res)
+        build(args.res, args.pool)
 
 
 if __name__ == "__main__":

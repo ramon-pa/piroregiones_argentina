@@ -120,7 +120,7 @@ Cambios de D14. Corridas con `07-regions.py`, 4/4 controles en todas.
   quemado. Varios bordes siguen la cobertura (Pampa agrícola y bonaerense, Chaco y Corrientes). Las
   regiones del Chaco occidental y del Espinal son mezclas de coberturas y de niveles de fuego.
 - **Delta del Paraná** (D15): metido en el Espinal, se quemaba bastante más que el resto. El árbol lo
-  separa en k = 25; se fuerza como tercera pieza: 15.401 km², 4,32 %/año. Al forzarlo, una celda de
+  separa en k = 25 (corrección 2026-10-28: ya en k = 24, misma pieza); se fuerza como tercera pieza: 15.401 km², 4,32 %/año. Al forzarlo, una celda de
   agua en la desembocadura del Uruguay quedó separada de su región y falló el control de conexión;
   se corrigió reasignando las celdas fuera del agrupamiento sobre el mapa final. 15 regiones,
   `ss_ratio` 0,536, 4/4 controles.

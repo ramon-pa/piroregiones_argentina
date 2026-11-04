@@ -37,7 +37,7 @@ fuego de Iván.
 | 04 frecuencia por celda | listo, 2/2; coincide con el 02 | `docs/04-frequency.md` |
 | 05 tablas decodificadas | listo, 5/5; desde acá todo es local | `docs/05-cell_table.md` |
 | 06 variables por celda | listo, 5/5 (res 6 y res 5) | `docs/06-variables.md` |
-| 07 pirorregiones | **borrador**: k = 12 más tres piezas forzadas (D14, D15), 15 regiones con nombres propuestos, 4/4 | `docs/07-regions.md` |
+| 07 pirorregiones | **borrador**: k = 12 más tres piezas forzadas (D14, D15), 15 regiones con nombres propuestos, 4/4. Candidato sin adoptar: cobertura según el fuego visto (`--cover-by-fire`), 14 regiones con bosque andino norte continuo | `docs/07-regions.md` |
 | 09 comparación con ecorregiones | empezado: dónde cae cada región; falta lo cuantitativo | `workflow/09-ecoregions.py` |
 | 10 fichas | pendiente, después del taller | |
 
@@ -72,7 +72,7 @@ Es una vista de este repo; si difieren, manda el repo.
 | `workflow/02-sweep.py` | paso 02: barrido D6, una tarea por año (`--export`), estado (`--status`), descarga de Drive (`--fetch`) y controles (`--check`) |
 | `scripts/check_assets.py` | paso 00: chequeo de solo lectura de los insumos de GEE |
 | `scripts/h3_cells_argentina.py` | cuántas celdas H3 cubren el país y cuánto varía su área |
-| `scripts/region_review.py` | revisión de regiones: quemado al menos una vez con bordes (`--burned-once`), árbol de particiones (`--splits`), qué regiones se parecen (`--similar`) |
+| `scripts/region_review.py` | revisión de regiones: quemado al menos una vez con bordes (`--burned-once`), árbol de particiones (`--splits`), qué regiones se parecen (`--similar`), qué variables separan (`--drivers`), árbol de REDCAP reconstruido (`--tree`), fichas por región (`--fichas`), sensibilidad al suavizado (`--pool-review`) y al peso de la cobertura (`--cover`, `--cover-grid`) |
 | `scripts/bench_redcap.py` | tiempo de REDCAP según el número de celdas, para elegir la resolución del paso 07 |
 | `scripts/bench_interactive.py` | pruebas interactivas de costo y precisión de los resúmenes por celda, y del barrido D6 (`--sweep`) |
 | `docs/00-overview.md` | el método en una página y la lista de pasos |
@@ -93,6 +93,7 @@ Es una vista de este repo; si difieren, manda el repo.
 | `docs/notes/06-variables.md` | la primera corrida de las variables |
 | `docs/notes/07-redcap_scaling.md` | REDCAP a res 6 no entra en la Mac; opciones para el paso 07 |
 | `docs/notes/07-regions_draft.md` | el primer borrador de pirorregiones (k = 15) y la curva de k |
+| `docs/notes/07-regions_drivers.md` | cómo crece REDCAP, qué variables separan, el árbol en el bosque patagónico, sensibilidad a la cobertura y el mapa candidato |
 
 ## 4. GEE asset paths
 
@@ -204,6 +205,14 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Pirorregiones, k = 12 + 3 piezas (D14, D15) | 15 regiones, 4/4 controles; `ss_ratio` 0,536 (pygeoda mide distinto); Delta del Paraná 15.401 km² y 4,32 %/año (la más alta), Espinal sin el Delta 1,14 %/año; oeste de Neuquén 9.698 km² y 0,41 %/año, oeste de Chubut 22.071 km² y 0,34 %/año, Estepa patagónica 0,05 %/año | `workflow/07-regions.py --build --k 12 --force`, 2026-10-27 | verificado; **borrador** |
 | Regiones más parecidas (k = 12 + 3), distancia entre perfiles medios | Andes áridos y Puna con Estepa patagónica 0,98; Chaco central con Espinal 1,12; Pampa agrícola con Pampa bonaerense 1,13; Selva misionera más cerca de la Pampa agrícola (1,62) | `scripts/region_review.py --similar`, 2026-10-27 | verificado |
 | Bosque patagónico (≥ 50 % bosque) por latitud | 0,29 a 0,30 %/año al norte de 43°S; 0,008 a 0,022 %/año al sur de 46°S | cálculo ad hoc sobre `variables_r5.parquet`, 2026-10-27; en `docs/notes/07-regions_draft.md` | verificado; **sin script en el repo** |
+| Árbol de REDCAP reconstruido (Ward sobre distancia al cuadrado, como libgeoda) | cortado, da exactamente las regiones de pygeoda en k = 5, 12, 20 y 25; con distancia simple difieren 1.223 a 2.943 celdas | `scripts/region_review.py --tree`, 2026-10-28 | verificado |
+| Franja de bosque andino norte (≥ 50 % bosque, oeste de 70°W, 39 a 46°S) | 136 celdas: 3 piezas como vecinas, 22 en el árbol; Nahuel Huapi a El Bolsón 92 km, 242 celdas de camino en el árbol; 47 % sin fuego entre 40 y 41°S | `scripts/region_review.py --tree`, 2026-10-28 | verificado |
+| Qué separa las regiones (k = 12 + 3) | R²: tasa 0,73, recurrencia 0,67, variabilidad 0,65; coberturas 2,5 % de la variación entre regiones; corte k = 3 dominado por tamaño de cicatriz (4,6 de 8,5 %) | `scripts/region_review.py --drivers`, 2026-10-28 | verificado |
+| Concentración de lo quemado | Chaco central 34,9 % y Monte y Caldenal 26,5 % del área quemada del país | `scripts/region_review.py --fichas`, 2026-10-28 | verificado |
+| Sensibilidad: historia de celdas con < 10 meses con fuego sumada a sus vecinas | 5.324 celdas (38 %) afectadas; el bosque andino norte sigue sin formar región (Jaccard máx. 0,22); las piezas de Neuquén y Chubut desaparecen (máx. 0,32 y 0,29); 71,6 % del área igual a k = 12. No adoptado | `06-variables.py --res 5 --pool`, `region_review.py --pool-review`, 2026-10-28 | verificado |
+| Sensibilidad: peso de la cobertura | uniforme 0,5 o 0,75: región de bosque andino norte desde k = 14 o 15, pero quedan 7 o 3 de las 12 regiones; peso según el fuego visto (0,2 a 0,5): región de bosque a k = 12 (46.743 km², 39,4 a 45,2°S, 0,28 %/año, contiene las piezas de Neuquén y Chubut), 94 % del área igual, se pierden Sierras de Córdoba y San Luis | `region_review.py --cover`, 2026-10-28 | verificado; **sin decidir** |
+| Robustez del peso según el fuego (topes 0,3 a 0,75, umbrales 5, 10 y 20 meses) | región de bosque andino norte a k = 12 en 8 de 9 variantes con tope ≥ 0,5 (la otra a k = 13), 45.000 a 58.000 km², con 98 % de la pieza de Neuquén; nunca con 0,3; las regiones que se pierden cambian según la variante; el Delta recién entre k = 22 y 26 | `region_review.py --cover-grid`, 2026-10-28 (2/2) | verificado |
+| Mapa candidato `--cover-by-fire` (k = 12 + Delta + valles del Río Negro) | 14 regiones, 4/4; bosque y ecotono andino norte 47.527 km², 0,28 %/año; valles irrigados del Río Negro (pieza de k = 24) 6.989 km², 0,16 %/año, contra 3,01 %/año del Monte y Caldenal; Delta igual que en el mapa elegido | `07-regions.py --build --k 12 --force --cover-by-fire`, 2026-10-28 | verificado; **sin adoptar** |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.
@@ -232,6 +241,9 @@ Antes de que cualquiera de estos números vaya a un mail o a la presentación: s
   dentro del AOI agrícola de la Pampa. Fuente: `docs/07-vector_to_raster.md`, "Object exclusion
   ruleset". Consecuencia: la tasa de quema agrícola está subestimada por construcción.
 - **El producto no tiene intensidad (FRP) ni causa de ignición.** Los antecedentes las usan.
+- **La familia de respaldo de la clase 21 dependía de la semilla de hash de Python** (empate pastizal y
+  agricultura): 50 celdas de res 5 cambiaban entre corridas. Resuelto el 2026-10-28: desempate
+  determinístico y `FALLBACK_FAMILY` (pastizal, D11); las variables no cambian.
 - **pygeoda REDCAP con varios hilos se cae** al azar (`std::length_error`). Usar `cpu_threads=1`
   (`docs/07-regions.md`, "Trampas").
 - Gotchas de GEE generales: no se copian acá, están en `~/Desktop/GIS/geospatial-skills/SKILLS/gee-gotchas.md`.

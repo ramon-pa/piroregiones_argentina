@@ -88,6 +88,11 @@ REGION_NAMES = {1: "CUYO", 2: "PAT", 3: "PAMPA", 4: "CHACO", 5: "BA"}
 # suffix dropped, e.g. forest-cerr_chaco and forest_pat are both "forest". Generated from that CSV
 # on 2026-10-26, not typed by hand. Non-burnable and non-observed rows left out. A (region, class)
 # pair missing here falls back to the class's most common family (step 06 reports that area).
+# Fallback families decided by hand, where the most common family of a class is a tie. Class 21
+# (mosaic of uses) is grassland in Cuyo and agriculture in Patagonia; in Pampa and Chaco, which the
+# remap leaves out, it is grassland (Ramón, 2026-10-28, D11): the family the chosen map was built
+# with, when the tie was settled by Python's hash seed. 0.02 Mha of burnable area per year.
+FALLBACK_FAMILY = {21: "grassland"}
 FAMILY_BY_REGION_CLASS = {
     (1, 3): "forest",
     (1, 4): "forest",
@@ -198,18 +203,40 @@ LOG_RATE_OFFSET = 0.001  # % of burnable area per year
 # the clustering and join their most common neighbouring region afterwards: in the first draft they
 # made a region of their own in the Rio de la Plata. Our threshold, not a paper's (D13).
 MIN_BURNABLE_SHARE = 0.10
+# Sensitivity of step 07 (06-variables.py --pool, 2026-10-28): a cell with fewer than POOL_MIN_EVENTS
+# fire records takes its season, size and variability from its own history summed with that of its
+# neighbours, ring by ring up to POOL_MAX_RING. Vidal-Riveros et al. 2024 (pp. 6-7) ask for 10
+# records per cell for size and intensity; Segura-Garcia et al. 2025 give a cell without fire the
+# peak of its neighbours. A record here is a month of a year with fire in the cell (the product has
+# no count of scars per cell): our reading, not a paper's. Rate and recurrence stay the cell's own.
+POOL_MIN_EVENTS = 10
+POOL_MAX_RING = 3  # res 5: about 45 km from the cell
 # Decisions D14 and D15: the k = REGIONS_K map plus pieces of deeper levels of the same REDCAP tree
 # (the regions are nested, so a deeper piece lies inside one region). Each piece is named by a point
 # in it, not by its number, which depends on k, and taken from its own level. The two Patagonian
 # pieces (k = 20) are where the northern Andean-Patagonian forest and its ecotone burn: 0.34 and
 # 0.41 % per year against 0.05 % for the rest of Patagonia (docs/notes/07-regions_draft.md). The
-# lower Paraná delta (k = 25, the first level where it splits off) burns well above the rest of its
+# lower Paraná delta (taken from k = 25; it splits off at k = 24 and is the same piece in both,
+# labels_r5.parquet, 2026-10-28) burns well above the rest of its
 # region (D15). `07-regions.py --force`.
 FORCED_SPLIT_POINTS = {  # name: (lat, lon, k of the level the piece comes from)
     "oeste de Chubut": (-43.0, -71.4, 20),
     "oeste de Neuquén": (-40.0, -70.9, 20),
     "delta del Paraná": (-33.29, -59.73, 25),
 }
+COVER_BY_FIRE_FORCED = {  # name: (lat, lon, k), forced pieces of the --cover-by-fire map (see above)
+    "delta del Paraná": FORCED_SPLIT_POINTS["delta del Paraná"],
+    "valles del Río Negro": (-39.10, -67.44, 24),
+}
+# Candidate (2026-10-28, not adopted): the family weight grows where a cell saw few fires, from
+# C.COMPOSITION_WEIGHT with POOL_MIN_EVENTS fire records or more to COVER_BY_FIRE_TOP with none. Our
+# rule, no paper; region_review.py --cover-grid shows the northern Andean forest region for tops of
+# 0.5 to 0.75. With it the two Patagonian pieces are not needed. Forced pieces of this map, as in D14
+# and D15: the delta, and the irrigated valleys of the Río Negro (Alto Valle and Valle Medio), a thin
+# branch of the Monte y Caldenal at k = 12 that burns 0.06 % per year against 2.9 for the rest and
+# splits off on its own at k = 24 (6,989 km², 0.16 % per year; Ramón, 2026-10-28). The point is a
+# res 5 cell of the Alto Valle near General Roca. `07-regions.py --cover-by-fire`.
+COVER_BY_FIRE_TOP = 0.5
 # Names and colours of the regions of the k = 12 + 3 map (D14, D15), each tied to a point inside the
 # region, not to its number. Proposed names (2026-10-27), read from where each region falls (step 09)
 # and its regime (step 07 summary); the more specific ones ("Sierras") are our reading, [no
@@ -231,6 +258,16 @@ PYROREGION_NAMES = {  # name: (lat, lon, colour)
     "Ecotono andino neuquino": (-40.11, -70.31, "#8e7cc3"),
     "Bosque andino chubutense": (-43.08, -71.39, "#2f8f6f"),
     "Estepa patagónica": (-42.93, -67.67, "#c9cfd6"),
+}
+
+# Names of the --cover-by-fire map: those of the chosen map without the two Patagonian pieces and the
+# Sierras (they join the forest region and the Chaco central), plus the forest region. Its name is
+# our proposal: 37 % of it is forest, the rest Andean ecotone (region_review.py --cover, 2026-10-28).
+PYROREGION_NAMES_BY_FIRE = {
+    **{n: p for n, p in PYROREGION_NAMES.items()
+       if n not in ("Sierras de Córdoba y San Luis", "Ecotono andino neuquino", "Bosque andino chubutense")},
+    "Bosque y ecotono andino norte": (-41.1, -71.5, "#2f8f6f"),
+    "Valles irrigados del Río Negro": (-39.10, -67.44, "#9e9ac8"),
 }
 
 # --- Step 09: where each region falls -----------------------------------------------------------

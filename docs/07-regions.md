@@ -69,6 +69,17 @@ uv run python workflow/07-regions.py --curve             # k = 2 a 30, un proces
 uv run python scripts/region_review.py --splits 21       # el árbol de particiones
 uv run python scripts/region_review.py --burned-once 12  # quemado al menos una vez con los bordes
 uv run python workflow/09-ecoregions.py --overlay --k 12 --forced   # provincias y ecorregiones
+uv run python scripts/region_review.py --drivers         # qué variables separan; matriz de distancias
+uv run python scripts/region_review.py --tree            # el árbol de REDCAP reconstruido, 4/4 controles
+uv run python scripts/region_review.py --fichas          # una fila y un mapa por región (después de --similar)
+uv run python workflow/06-variables.py --build --res 5 --pool   # sensibilidad
+uv run python workflow/07-regions.py --build --k 12 --pool
+uv run python scripts/region_review.py --pool-review     # comparación con el mapa elegido
+uv run python scripts/region_review.py --cover           # sensibilidad al peso de la cobertura
+uv run python scripts/region_review.py --cover-grid      # robustez del peso según el fuego, 15 variantes
+uv run python workflow/07-regions.py --build --k 12 --force --cover-by-fire   # mapa candidato: Delta y valles del Río Negro forzados
+uv run python workflow/09-ecoregions.py --overlay --k 12 --forced --cover-by-fire
+uv run python workflow/07-regions.py --build --k 12 --force --cover-by-fire   # otra vez, con provincias
 ```
 
 ## Decisiones clave
@@ -106,3 +117,5 @@ uv run python workflow/09-ecoregions.py --overlay --k 12 --forced   # provincias
 - `docs/decisions.md`: D1, D5, D12, D13, D14, D15.
 - `docs/notes/07-redcap_scaling.md`: por qué res 5.
 - `docs/notes/07-regions_draft.md`: los borradores, medidos, de k = 15 al mapa de 15 regiones.
+- `docs/notes/07-regions_drivers.md`: cómo crece REDCAP (leído en libgeoda y reconstruido), qué variables
+  separan y por qué no hay una región de bosque andino-patagónico norte.

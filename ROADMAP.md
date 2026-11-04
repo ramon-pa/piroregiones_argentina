@@ -13,6 +13,12 @@ Estado por paso: `CLAUDE.md`, "Current state".
 
 ## Ahora
 
+- [ ] Decidir si se adopta el mapa candidato `--cover-by-fire` (14 regiones: bosque y ecotono
+  andino norte continuo, Delta y valles del Río Negro forzados; `docs/notes/07-regions_drivers.md`).
+  Reabre D12 y D14. Si se adopta: renombrar la región 1 (ya no es "Chaco occidental y pedemonte",
+  la leyenda se pisa), registrar la decisión y actualizar el deck.
+- [ ] Pruebas que siguen del plan del 2026-10-28: B, vecinos por distancia (< 30 km) para saltar la
+  frontera con Chile; A, tipos de régimen con Ward sin contigüidad sobre las regiones (D5).
 - [ ] Llevar al taller las dos preguntas abiertas del mapa y anotar lo que surja:
   - una región continua de bosque andino-patagónico norte, del Lanín a Los Alerces (slide "A
     discutir");

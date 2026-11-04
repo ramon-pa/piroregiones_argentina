@@ -9,6 +9,7 @@ classes) and by province. The first part of step 09; the quantitative comparison
              places_r5_k<k>.csv: the share of each region in each ecoregion and province.
   --k N      which step 07 output to read (default C.REGIONS_K).
   --forced   read the output of 07-regions.py --force (decision D14).
+  --cover-by-fire  read the output of 07-regions.py --cover-by-fire (candidate, 2026-10-28).
 
 Run from the repo root:
 
@@ -57,13 +58,13 @@ def fetch():
         print(f"wrote {(ANC / f'{name}.parquet').relative_to(REPO)}  {len(gdf)} features")
 
 
-def overlay(k, forced=False):
+def overlay(k, forced=False, cover_fire=False):
     import geopandas as gpd
     import numpy as np
     import pandas as pd
 
     g = gpd.read_parquet(GRID)
-    tag = f"r{C.REGIONS_RES}_k{k}" + ("_forced" if forced else "")
+    tag = f"r{C.REGIONS_RES}_k{k}" + ("_forced" if forced else "") + ("_coverfire" if cover_fire else "")
     r = pd.read_parquet(REGIONS / f"regions_{tag}.parquet")
     g["region"] = r.region.to_numpy()[np.searchsorted(r.h3.to_numpy(), g.h3_r5.to_numpy())]
     pts = gpd.GeoDataFrame(g[["cell", "region", "area_km2"]], geometry=g.geometry.representative_point(), crs=g.crs)
@@ -92,11 +93,12 @@ def main():
     ap.add_argument("--overlay", action="store_true", help="share of each region per ecoregion and province (default)")
     ap.add_argument("--k", type=int, default=C.REGIONS_K, help="which step 07 output to read")
     ap.add_argument("--forced", action="store_true", help="read the --force output of step 07 (D14)")
+    ap.add_argument("--cover-by-fire", action="store_true", help="read the --cover-by-fire output of step 07")
     args = ap.parse_args()
     if args.fetch:
         fetch()
     if args.overlay or not args.fetch:
-        overlay(args.k, args.forced)
+        overlay(args.k, args.forced, args.cover_by_fire)
 
 
 if __name__ == "__main__":
