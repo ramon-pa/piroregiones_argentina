@@ -357,3 +357,18 @@ de Rosario, pero impone un límite de vegetación (principio 4 de Erni et al. 20
 norte de 32°S sigue en el Espinal hasta k = 30: queda como pregunta abierta, igual que la región
 continua de bosque andino-patagónico norte (slide "A discutir" del taller).
 
+## D16 · Ajustes del equipo sobre el mapa · acordada (2026-11-04)
+
+**Pedido por el equipo de MapBiomas**, que aclaró que no hace falta respaldo bibliográfico. Se aplican
+sobre k = 12 + 3 con `--force --team-edits`; quedan 14 regiones.
+
+1. **Una sola región de bosque** ("Bosque y ecotono andino norte"): las piezas de Neuquén y Chubut más
+   un corredor de 48 celdas de estepa (9.204 km²). Reabre lo descartado en D14 y resuelve la pregunta
+   de la región continua.
+2. **Ancho mínimo de 2 hexágonos en todo el mapa.** Saca el valle del Río Negro de Monte y Caldenal,
+   sin recorte a mano. Un tramo colgado de menos de 10 celdas se quita; si es mayor, se ensancha el
+   cuello. El bosque solo se ensancha. Corte de 10 celdas: nuestro.
+3. **Mapa recortado al contorno del país.** Solo cambia el dibujo; el área de las celdas sigue entera.
+
+Costo: `ss_ratio` de 0,536 a 0,523; 97,0 % del área en la misma región. Quedan 19 celdas de 1 hexágono,
+todas de costa o frontera con menos de 3 vecinas.

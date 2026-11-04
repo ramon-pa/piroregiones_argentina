@@ -65,6 +65,9 @@ uv run python workflow/07-regions.py --build --k 20      # otro k
 uv run python workflow/07-regions.py --build --k 12 --force   # el mapa elegido: k = 12 + 3 (D14, D15)
 uv run python workflow/09-ecoregions.py --overlay --k 12 --forced
 uv run python workflow/07-regions.py --build --k 12 --force   # otra vez: la leyenda lee las provincias del 09
+uv run python workflow/07-regions.py --build --k 12 --force --team-edits   # el mapa actual: 14 regiones (D16)
+uv run python workflow/09-ecoregions.py --overlay --k 12 --forced --team-edits
+uv run python workflow/07-regions.py --build --k 12 --force --team-edits   # otra vez, con provincias
 uv run python workflow/07-regions.py --curve             # k = 2 a 30, un proceso por k, ~10 min
 uv run python scripts/region_review.py --splits 21       # el árbol de particiones
 uv run python scripts/region_review.py --burned-once 12  # quemado al menos una vez con los bordes
@@ -114,7 +117,7 @@ uv run python workflow/07-regions.py --build --k 12 --force --cover-by-fire   # 
 
 ## Relacionado
 
-- `docs/decisions.md`: D1, D5, D12, D13, D14, D15.
+- `docs/decisions.md`: D1, D5, D12, D13, D14, D15, D16.
 - `docs/notes/07-redcap_scaling.md`: por qué res 5.
 - `docs/notes/07-regions_draft.md`: los borradores, medidos, de k = 15 al mapa de 15 regiones.
 - `docs/notes/07-regions_drivers.md`: cómo crece REDCAP (leído en libgeoda y reconstruido), qué variables

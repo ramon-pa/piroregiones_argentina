@@ -24,7 +24,7 @@ a 30 m (sección 4).
 Motivación: el antecedente más cercano en Argentina (Naval-Fernández et al. 2025) cubre solo el
 Chaco, con MODIS a 500 m, sin cobertura y sin regiones continuas. Ver `docs/references.md`.
 
-## 2. Current state (2026-10-27)
+## 2. Current state (2026-11-04)
 
 Repo: `git@github.com:ramon-pa/piroregiones_argentina.git` (privado), organizado como el repo de
 fuego de Iván.
@@ -37,12 +37,13 @@ fuego de Iván.
 | 04 frecuencia por celda | listo, 2/2; coincide con el 02 | `docs/04-frequency.md` |
 | 05 tablas decodificadas | listo, 5/5; desde acá todo es local | `docs/05-cell_table.md` |
 | 06 variables por celda | listo, 5/5 (res 6 y res 5) | `docs/06-variables.md` |
-| 07 pirorregiones | **borrador**: k = 12 más tres piezas forzadas (D14, D15), 15 regiones con nombres propuestos, 4/4. Candidato sin adoptar: cobertura según el fuego visto (`--cover-by-fire`), 14 regiones con bosque andino norte continuo | `docs/07-regions.md` |
+| 07 pirorregiones | **preliminar**: k = 12 más tres piezas (D14, D15) y ajustes del equipo (D16, `--team-edits`), 14 regiones con nombres propuestos, 4/4 | `docs/07-regions.md` |
 | 09 comparación con ecorregiones | empezado: dónde cae cada región; falta lo cuantitativo | `workflow/09-ecoregions.py` |
 | 10 fichas | pendiente, después del taller | |
 
-Decisiones: D1, D2, D4, D6 a D15 acordadas; D3 y D5 abiertas (`docs/decisions.md`). Pregunta
-abierta del mapa: una región continua de bosque andino-patagónico norte (no la arma el método).
+Decisiones: D1, D2, D4, D6 a D16 acordadas; D3 y D5 abiertas (`docs/decisions.md`).
+
+Diapo para el factsheet (privada): https://claude.ai/artifact/2iaZkFbJtyU6kLvK8AgNLS
 
 Presentación del taller (borrador, 6 slides): https://claude.ai/artifact/HoQ5bdgQzdFd4r8aLEW8AE
 (privada). Qué sigue: `ROADMAP.md`.
@@ -213,6 +214,7 @@ el 2026-10-14 con los transforms que devuelve GEE, mismo paso de píxel (diferen
 | Sensibilidad: peso de la cobertura | uniforme 0,5 o 0,75: región de bosque andino norte desde k = 14 o 15, pero quedan 7 o 3 de las 12 regiones; peso según el fuego visto (0,2 a 0,5): región de bosque a k = 12 (46.743 km², 39,4 a 45,2°S, 0,28 %/año, contiene las piezas de Neuquén y Chubut), 94 % del área igual, se pierden Sierras de Córdoba y San Luis | `region_review.py --cover`, 2026-10-28 | verificado; **sin decidir** |
 | Robustez del peso según el fuego (topes 0,3 a 0,75, umbrales 5, 10 y 20 meses) | región de bosque andino norte a k = 12 en 8 de 9 variantes con tope ≥ 0,5 (la otra a k = 13), 45.000 a 58.000 km², con 98 % de la pieza de Neuquén; nunca con 0,3; las regiones que se pierden cambian según la variante; el Delta recién entre k = 22 y 26 | `region_review.py --cover-grid`, 2026-10-28 (2/2) | verificado |
 | Mapa candidato `--cover-by-fire` (k = 12 + Delta + valles del Río Negro) | 14 regiones, 4/4; bosque y ecotono andino norte 47.527 km², 0,28 %/año; valles irrigados del Río Negro (pieza de k = 24) 6.989 km², 0,16 %/año, contra 3,01 %/año del Monte y Caldenal; Delta igual que en el mapa elegido | `07-regions.py --build --k 12 --force --cover-by-fire`, 2026-10-28 | verificado; **sin adoptar** |
+| Mapa con ajustes del equipo (D16) | 14 regiones, 4/4; `ss_ratio` 0,523; Delta 16.359 km² y 4,09 %/año; bosque y ecotono andino norte 44.180 km² y 0,31 %/año; Monte y Caldenal 2,93 %/año y 26,0 % de lo quemado, Chaco central 34,4 % | `07-regions.py --build --k 12 --force --team-edits`, 2026-11-04 | verificado; **preliminar** |
 | Código máximo de D6 en res 6 | 1.253.990.138 (< 2.147.483.647) | cuenta con `utils/constants.py`, 2026-10-19 | verificado |
 
 Antes de que cualquiera de estos números vaya a un mail o a la presentación: script en el repo, corrido, salida vista.

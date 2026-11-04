@@ -21,6 +21,8 @@ weights survive (pygeoda standardizes by default).
   --force           add the pieces of C.FORCED_SPLIT_POINTS, each taken from its own deeper k level of
                     the same tree (decisions D14 and D15); adds _forced to the names.
   --log-offset X    another offset for the log of the rate (sensitivity); adds _off<X> to the names.
+  --team-edits      with --force, the edits the MapBiomas team asked for (D16): one forest region, no
+                    branch one hexagon wide, map clipped to the country; adds _edited.
   --pool            the variables of 06-variables.py --pool (sensitivity, 2026-10-28); adds _pool.
   --cover-by-fire   candidate (2026-10-28): family weight by the fire each cell saw, up to
                     C.COVER_BY_FIRE_TOP, and the pieces of C.COVER_BY_FIRE_FORCED with --force;
@@ -276,6 +278,7 @@ def summary(v, poly):
             "family": max(fam, key=fam.get),
             "family_share": max(fam.values()) / bh.sum() if bh.sum() > 0 else np.nan,
             "mapbiomas_region": C.REGION_NAMES[reg.idxmax()],
+            "burned_share": fh.sum() / v.burned_ha.sum(),
             "no_fire_area_share": d.area_km2[d.no_fire].sum() / d.area_km2.sum(),
             "excluded_area_share": d.area_km2[~d.clustered].sum() / d.area_km2.sum(),
         })
@@ -316,6 +319,193 @@ def force_splits(v, nb_raw, nb_all, offset, points):
     # mouth of the Uruguay was cut off from its region by the delta piece (2026-10-27).
     kept = v.clustered.to_numpy()
     return assign_excluded(v, pd.Series(region[kept], index=v.index[kept]), nb_all)
+
+
+def is_thin(c, region, nb):
+    """Whether cell `c` is one hexagon wide: no two neighbours of its region touch each other."""
+    same = [n for n in nb[c] if region[n] == region[c]]
+    return not any(b in nb[a] for i, a in enumerate(same) for b in same[i + 1:])
+
+
+def strips(region, r, nb):
+    """Parts of region `r` that are two hexagons wide everywhere: its triangles of mutual neighbours,
+    joined when they share an edge. Sets of cells, largest first."""
+    import numpy as np
+
+    cells = set(np.where(region == r)[0])
+    tris = set()
+    for c in cells:
+        s = nb[c] & cells
+        for a in s:
+            for b in nb[a] & s:
+                tris.add(frozenset((c, a, b)))
+    tris = list(tris)
+    parent = list(range(len(tris)))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    edge = {}
+    for i, t in enumerate(tris):
+        for a in t:
+            for b in t:
+                if a < b:
+                    if (a, b) in edge:
+                        parent[find(i)] = find(edge[(a, b)])
+                    else:
+                        edge[(a, b)] = i
+    groups = {}
+    for i, t in enumerate(tris):
+        groups.setdefault(find(i), set()).update(t)
+    return sorted(groups.values(), key=len, reverse=True)
+
+
+def join_forest(v, region, nb):
+    """One forest region (D16): the blocks of C.FOREST_BLOCKS, the cheapest path between them across
+    the steppe, preferring forest, and the forest cells beside it. Returns the region's id."""
+    import heapq
+
+    import h3
+    import numpy as np
+
+    def at(lat, lon):
+        return region[(v.h3 == h3.latlng_to_cell(lat, lon, C.REGIONS_RES)).to_numpy()][0]
+
+    north, south = (at(*C.FORCED_SPLIT_POINTS[b][:2]) for b in C.FOREST_BLOCKS)
+    steppe = at(*C.PYROREGION_NAMES["Estepa patagónica"][:2])
+    ll = np.array([h3.cell_to_latlng(x) for x in v.h3])
+    lat, lon = ll[:, 0], ll[:, 1]
+    block_n, block_s = set(np.where(region == north)[0]), set(np.where(region == south)[0])
+    allowed = set(np.where(region == steppe)[0])
+    cost, prev = {c: 0.0 for c in block_n}, {}
+    queue = [(0.0, c) for c in block_n]
+    heapq.heapify(queue)
+    end = None
+    while queue:
+        d, c = heapq.heappop(queue)
+        if d > cost[c]:
+            continue
+        if c in block_s:
+            end = c
+            break
+        for n in nb[c]:
+            if n in allowed or n in block_s:
+                nd = d + 0.05 + 1 - v.fam_forest.iat[n]
+                if nd < cost.get(n, 1e9):
+                    cost[n], prev[n] = nd, c
+                    heapq.heappush(queue, (nd, n))
+    path = []
+    c = end
+    while c in prev:
+        path.append(c)
+        c = prev[c]
+    margin = C.FOREST_CORRIDOR_LAT_MARGIN
+    beside = np.where((region == steppe) & (lat > lat[list(block_s)].max() - margin)
+                      & (lat < lat[list(block_n)].min() + margin) & (lon < C.FOREST_CORRIDOR_WEST_OF)
+                      & (v.fam_forest >= C.FOREST_CORRIDOR_MIN_SHARE))[0]
+    corridor = {c for c in path if c in allowed} | set(beside)
+    region[list(corridor)] = north
+    region[region == south] = north
+    print(f"  info  forest corridor: {len(corridor)} cells, {v.area_km2.iloc[list(corridor)].sum():,.0f} km²")
+    return north
+
+
+def min_width(v, region, nb, nb_all, forest):
+    """No branch or neck one hexagon wide (D16). Thin cells go to the neighbouring region where they
+    stop being thin, or its most common one; the forest region keeps its cells and widens instead."""
+    import numpy as np
+    import pandas as pd
+
+    moves = {}
+
+    def target(c):
+        counts = pd.Series([region[n] for n in nb[c] if region[n] != region[c]]).value_counts()
+        if counts.empty:
+            return None
+        good = []
+        for o in counts.index:
+            own, region[c] = region[c], o
+            if not is_thin(c, region, nb):
+                good.append(o)
+            region[c] = own
+        return min(good or list(counts.index), key=lambda o: (-counts[o], o))
+
+    def move(c, new):
+        moves[c] = moves.get(c, 0) + 1
+        region[c] = new
+
+    for _ in range(40):
+        changed = 0
+        for c in np.where(region == forest)[0]:
+            if is_thin(c, region, nb):
+                same = [x for x in nb[c] if region[x] == forest]
+                cand = [x for x in nb[c] if region[x] != forest and any(x in nb[s] for s in same)]
+                if cand:
+                    region[max(cand, key=lambda x: (v.fam_forest.iat[x], -x))] = forest
+                    changed += 1
+        for c in v.cell:
+            if region[c] != forest and moves.get(c, 0) < C.MIN_WIDTH_MAX_MOVES and is_thin(c, region, nb):
+                t = target(c)
+                if t is not None:
+                    move(c, t)
+                    changed += 1
+        # Pieces cut off from their region go to its most common neighbour.
+        for r in np.unique(region):
+            comps = sorted(components(nb_all, set(np.where(region == r)[0])), key=len, reverse=True)
+            for comp in comps[1:]:
+                out = pd.Series([region[n] for c in comp for n in nb_all[c] if region[n] != r]).value_counts()
+                region[list(comp)] = out.index[0]
+                changed += 1
+        # Strips joined only by a vertex or an edge: the small ones go, the others get a wider neck.
+        for r in np.unique(region):
+            parts = strips(region, r, nb)
+            for s in parts[1:]:
+                rest = set().union(*[o for o in parts if o is not s])
+                shared = s & rest
+                if not shared:  # by an edge, or none at all: another land mass, not a neck
+                    for a, b in ((a, b) for a in s for b in nb[a] & rest):
+                        cand = [x for x in nb[a] & nb[b] if region[x] != r]
+                        if cand:
+                            region[max(cand, key=lambda x: v.fam_forest.iat[x] if r == forest else -x)] = r
+                            changed += 1
+                            break
+                elif len(s) < C.MIN_WIDTH_SMALL_PIECE and r != forest:
+                    for c in s - shared:
+                        t = target(c)
+                        if t is not None and t != r:
+                            move(c, t)
+                            changed += 1
+                else:
+                    widened = False
+                    for c in shared:
+                        for x in nb[c]:
+                            if region[x] != r and (nb[x] & s) and (nb[x] & rest):
+                                region[x] = r
+                                changed += 1
+                                widened = True
+                                break
+                        if widened:
+                            break
+        if not changed:
+            return region
+    raise RuntimeError("min_width did not settle")
+
+
+def clip_to_country(poly):
+    """The regions clipped to the outline of the country, from the provinces of step 09."""
+    import geopandas as gpd
+    import shapely
+    from shapely.geometry import MultiPolygon, Polygon
+
+    provinces = gpd.read_parquet(REPO / C.ANCILLARY_DIR / "provinces.parquet")
+    closed = shapely.make_valid(shapely.union_all(provinces.geometry.values)).buffer(C.COUNTRY_CLOSE_DEG).buffer(-C.COUNTRY_CLOSE_DEG)
+    country = MultiPolygon([Polygon(p.exterior) for p in closed.geoms])
+    poly = poly.copy()
+    poly["geometry"] = shapely.intersection(shapely.make_valid(poly.geometry.values), country, grid_size=1e-7)
+    return poly.set_crs(provinces.crs, allow_override=True)
 
 
 def polygons(v, g):
@@ -410,11 +600,11 @@ def draw(poly, s, title, path, places_path, names=C.PYROREGION_NAMES):
     plt.close(fig)
 
 
-def build(k, offset, force=False, pool=False, cover_fire=False):
+def build(k, offset, force=False, pool=False, cover_fire=False, team_edits=False):
     import pandas as pd
 
     v, g = load(pool)
-    points, names = C.FORCED_SPLIT_POINTS, C.PYROREGION_NAMES
+    points, names = C.FORCED_SPLIT_POINTS, C.PYROREGION_NAMES_EDITED if team_edits else C.PYROREGION_NAMES
     if cover_fire:
         rec = fire_records(v)
         v["cover_w"] = cover_by_fire(rec, C.COVER_BY_FIRE_TOP)
@@ -441,12 +631,20 @@ def build(k, offset, force=False, pool=False, cover_fire=False):
         # ss_ratio, not pygeoda's ratio: the two differ (k = 12: 0.523 against 0.469, 2026-10-27; not
         # explained yet), so compare forced and unforced maps with ss_ratio only.
         print(f"with the forced pieces: {n_regions} regions, between/total (ss_ratio) {ss_ratio(v, offset):.3f}")
+    if team_edits:
+        region = v.region.to_numpy().copy()
+        forest = join_forest(v, region, nb_raw)
+        region = min_width(v, region, nb_raw, nb_all, forest)
+        v["region"] = number_north_to_south(v, region)
+        n_regions -= len(C.FOREST_BLOCKS) - 1
+        print(f"with the team edits: {n_regions} regions, between/total (ss_ratio) {ss_ratio(v, offset):.3f}")
 
     OUT.mkdir(parents=True, exist_ok=True)
-    tag = (f"r{C.REGIONS_RES}_k{k}" + ("_forced" if force else "") + ("_pool" if pool else "")
-           + ("_coverfire" if cover_fire else "") + ("" if offset == C.LOG_RATE_OFFSET else f"_off{offset:g}"))
+    tag = (f"r{C.REGIONS_RES}_k{k}" + ("_forced" if force else "") + ("_edited" if team_edits else "")
+           + ("_pool" if pool else "") + ("_coverfire" if cover_fire else "")
+           + ("" if offset == C.LOG_RATE_OFFSET else f"_off{offset:g}"))
     v[["cell", "h3", "region", "clustered"]].to_parquet(OUT / f"regions_{tag}.parquet", index=False)
-    poly = polygons(v, g)
+    poly = clip_to_country(polygons(v, g)) if team_edits else polygons(v, g)
     poly.to_parquet(OUT / f"regions_{tag}_polygons.parquet", index=False)
     s = summary(v, poly)
     s.to_csv(OUT / f"summary_{tag}.csv", index=False, float_format="%.4g")
@@ -454,6 +652,7 @@ def build(k, offset, force=False, pool=False, cover_fire=False):
     km2 = f"{C.MIN_REGION_KM2:,.0f}".replace(",", ".")
     extra = (f" + {len(points)} pieza{'s' if len(points) > 1 else ''} forzada{'s' if len(points) > 1 else ''}"
              if force else "")
+    extra += ", ajustes del equipo" if team_edits else ""
     extra += ", historia de celdas con poco fuego sumada a sus vecinas" if pool else ""
     extra += (",\ncobertura con peso según el fuego visto "
                   f"({C.COMPOSITION_WEIGHT:g} a {C.COVER_BY_FIRE_TOP:g})".replace(".", ",")) if cover_fire else ""
@@ -464,6 +663,12 @@ def build(k, offset, force=False, pool=False, cover_fire=False):
         print(f"wrote {p.relative_to(REPO)}")
     with pd.option_context("display.width", 250, "display.max_columns", 30):
         print(s.round(3).to_string(index=False))
+    if team_edits:
+        region = v.region.to_numpy()
+        # Coast and border cells with one or two neighbours in the grid cannot be two wide.
+        thin = [c for c in v.cell if is_thin(c, region, nb_raw)]
+        print(f"  info  thin cells left: {len(thin)}, all with fewer than 3 neighbours in the grid")
+        assert all(len(nb_raw[c]) < 3 for c in thin), "a branch one hexagon wide is left"
     check(v, nb_all, links + links_all, n_regions)
 
 
@@ -541,14 +746,17 @@ def main():
     ap.add_argument("--k", type=int, nargs="+", default=[C.REGIONS_K], help="number(s) of regions for --build")
     ap.add_argument("--log-offset", type=float, default=C.LOG_RATE_OFFSET, help="offset of log10(rate + offset)")
     ap.add_argument("--force", action="store_true", help="add the forced pieces of decision D14")
+    ap.add_argument("--team-edits", action="store_true", help="with --force, the MapBiomas team's edits (D16)")
     ap.add_argument("--pool", action="store_true", help="sensitivity: variables of 06-variables.py --pool")
     ap.add_argument("--cover-by-fire", action="store_true", help="candidate: family weight by the fire each cell saw")
     args = ap.parse_args()
+    if args.team_edits and not args.force:
+        ap.error("--team-edits needs --force: it edits the forced pieces")
     if args.curve:
         curve(args.log_offset)
     if args.build or not args.curve:
         for k in args.k:
-            build(k, args.log_offset, args.force, args.pool, args.cover_by_fire)
+            build(k, args.log_offset, args.force, args.pool, args.cover_by_fire, args.team_edits)
 
 
 if __name__ == "__main__":

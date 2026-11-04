@@ -270,6 +270,26 @@ PYROREGION_NAMES_BY_FIRE = {
     "Valles irrigados del Río Negro": (-39.10, -67.44, "#9e9ac8"),
 }
 
+# Team edits of the chosen map (D16), `07-regions.py --force --team-edits`. The MapBiomas team asked for
+# them knowing that no paper backs them; the numbers here are ours. The two forest pieces of
+# FORCED_SPLIT_POINTS become one region, through the cheapest path across the steppe plus the forest
+# cells beside it (at least this share of forest, west of this longitude, this far beyond the blocks).
+FOREST_BLOCKS = ("oeste de Neuquén", "oeste de Chubut")
+FOREST_CORRIDOR_MIN_SHARE = 0.5
+FOREST_CORRIDOR_WEST_OF = -70.0
+FOREST_CORRIDOR_LAT_MARGIN = 0.3
+# No branch one hexagon wide: a piece hanging from a neck goes below this many cells, above it the
+# neck is widened. A cell moves at most MIN_WIDTH_MAX_MOVES times, or a few of them never settle.
+MIN_WIDTH_SMALL_PIECE = 10
+MIN_WIDTH_MAX_MOVES = 3
+# The map is clipped to the country: the outline of the provinces of step 09, with the slivers between
+# them closed by this buffer in degrees. Only the drawing changes, cell areas stay whole.
+COUNTRY_CLOSE_DEG = 0.03
+PYROREGION_NAMES_EDITED = {
+    **{n: p for n, p in PYROREGION_NAMES.items() if n not in ("Ecotono andino neuquino", "Bosque andino chubutense")},
+    "Bosque y ecotono andino norte": (-41.1, -71.5, "#2f8f6f"),
+}
+
 # --- Step 09: where each region falls -----------------------------------------------------------
 # Provinces: FAO GAUL 2025, the 500 m simplified version (the 2015 one is deprecated in GEE).
 PROVINCES = "FAO/GAUL_SIMPLIFIED_500m/2025/level1"

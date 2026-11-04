@@ -58,13 +58,14 @@ def fetch():
         print(f"wrote {(ANC / f'{name}.parquet').relative_to(REPO)}  {len(gdf)} features")
 
 
-def overlay(k, forced=False, cover_fire=False):
+def overlay(k, forced=False, cover_fire=False, team_edits=False):
     import geopandas as gpd
     import numpy as np
     import pandas as pd
 
     g = gpd.read_parquet(GRID)
-    tag = f"r{C.REGIONS_RES}_k{k}" + ("_forced" if forced else "") + ("_coverfire" if cover_fire else "")
+    tag = (f"r{C.REGIONS_RES}_k{k}" + ("_forced" if forced else "") + ("_edited" if team_edits else "")
+           + ("_coverfire" if cover_fire else ""))
     r = pd.read_parquet(REGIONS / f"regions_{tag}.parquet")
     g["region"] = r.region.to_numpy()[np.searchsorted(r.h3.to_numpy(), g.h3_r5.to_numpy())]
     pts = gpd.GeoDataFrame(g[["cell", "region", "area_km2"]], geometry=g.geometry.representative_point(), crs=g.crs)
@@ -94,11 +95,12 @@ def main():
     ap.add_argument("--k", type=int, default=C.REGIONS_K, help="which step 07 output to read")
     ap.add_argument("--forced", action="store_true", help="read the --force output of step 07 (D14)")
     ap.add_argument("--cover-by-fire", action="store_true", help="read the --cover-by-fire output of step 07")
+    ap.add_argument("--team-edits", action="store_true", help="read the --team-edits output of step 07 (D16)")
     args = ap.parse_args()
     if args.fetch:
         fetch()
     if args.overlay or not args.fetch:
-        overlay(args.k, args.forced, args.cover_by_fire)
+        overlay(args.k, args.forced, args.cover_by_fire, args.team_edits)
 
 
 if __name__ == "__main__":
